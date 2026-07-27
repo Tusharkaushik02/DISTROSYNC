@@ -1,0 +1,1 @@
+//use singleton desgin ppatter 

@@ -1,0 +1,1 @@
+//use singelton pattern
