@@ -46,7 +46,7 @@ model User {
   id              String      @id @default(uuid()) @db.Uuid
 
   companyId       String?     @unique @db.Uuid
-  company         Company?    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company         Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   name            String
   email           String      @unique
