@@ -1,39 +1,34 @@
-const { createClient } = require('redis');
+const Redis = require('ioredis');
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-
-const globalForRedis = global;
-
-if (!globalForRedis.redisClient) {
-  const client = createClient({
-    url: redisUrl,
-  });
-
-  client.on('error', (err) => {
-    console.error('[Redis Error]', err.message);
-  });
-
-  client.on('connect', () => {
-    console.log('[Redis] Connected successfully');
-  });
-
-  globalForRedis.redisClient = client;
-}
-
-const redisClient = globalForRedis.redisClient;
-
-// Ensure connection is established safely when client is used
-async function connectRedis() {
-  if (!redisClient.isOpen && !redisClient.isConnecting) {
-    await redisClient.connect();
+class RedisClient {
+  static instance = null;
+  static isConnected = false;
+  constructor() {
+    //private constructor to prevent instantiation
   }
-  return redisClient;
+
+  static getInstance() {
+    if (!RedisClient.instance) {
+      RedisClient.instance = new Redis(process.env.REDIS_URL, {
+        retryStrategy: (times) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+        maxRetriesPerRequest: 3,
+      });
+
+      RedisClient.instance.on('connect', () => {
+        RedisClient.isConnected = true;
+        console.log('Redis connected');
+      });
+
+      RedisClient.instance.on('error', (err) => {
+        RedisClient.isConnected = false;
+        console.error('Redis error:', err.message);
+      });
+    }
+    return RedisClient.instance;
+  }
 }
 
-// Trigger initial connection asynchronously
-connectRedis().catch((err) => {
-  console.error('[Redis] Failed initial connection attempt:', err.message);
-});
-
-module.exports = redisClient;
-module.exports.connectRedis = connectRedis;
+module.exports = { redis: RedisClient.getInstance(), RedisClient };
