@@ -1,16 +1,5 @@
 require('dotenv').config(); // loads user-service/.env
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const helmet = require('helmet');
-
-
-const app = express();
-const authRoutes = require('./routes/auth.route');
-
-app.use(express.json());
-app.use(cookieParser());
-app.use(helmet());
-
+const app = require('./src/app');
 
 const startServer = async () => {
     try {
