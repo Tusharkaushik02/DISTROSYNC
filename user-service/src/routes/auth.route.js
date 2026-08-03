@@ -1,19 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const {
-    sendOtp,
-    verifyOtp,
+    sendOTP,
+    verifyOTP,
     login,
-    refresh,
+    refreshToken,
     logout,
-    logoutAll
-} = require('../controllers/auth/auth.controller');
+    getCurrentUser
+} = require('../controllers/auth.controller');
 
-router.post('/send-otp', sendOtp);
-router.post('/verify-otp', verifyOtp);
+router.post('/send-otp', sendOTP);
+router.post('/verify-otp', verifyOTP);
 router.post('/login', login);
-router.post('/refresh', refresh);
+router.post('/refresh', refreshToken);
 router.post('/logout', logout);
-router.post('/logout-all', logoutAll);
+router.get('/me', getCurrentUser);
 
 module.exports = router;
