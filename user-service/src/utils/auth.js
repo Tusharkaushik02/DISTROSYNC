@@ -1,9 +1,11 @@
-//generate access token ,refresh token and verify const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+
+const generateJti = () => {
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}-${Math.random().toString(36).substring(2, 11)}`;
+};
 
 const generateAccessToken = (userId) => {
-
-    const jti = crypto.randomUUID();
+    const jti = generateJti();
 
     const token = jwt.sign(
         {
@@ -11,9 +13,9 @@ const generateAccessToken = (userId) => {
             jti,
             type: "access"
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_ACCESS_SECRET,
         {
-            expiresIn: process.env.ACCESS_TOKEN_TTL
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN
         }
     );
 
@@ -24,8 +26,7 @@ const generateAccessToken = (userId) => {
 };
 
 const generateRefreshToken = (userId) => {
-
-    const jti = crypto.randomUUID();
+    const jti = generateJti();
 
     const token = jwt.sign(
         {
@@ -33,9 +34,9 @@ const generateRefreshToken = (userId) => {
             jti,
             type: "refresh"
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_REFRESH_SECRET,
         {
-            expiresIn: process.env.REFRESH_TOKEN_TTL
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN
         }
     );
 
@@ -45,12 +46,25 @@ const generateRefreshToken = (userId) => {
     };
 };
 
-const verifyRefreshToken = (token) => {
+const verifyAccessToken = (token) => {
     try {
-        return jwt.verify(token, process.env.JWT_SECRET);
+        return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
     } catch (error) {
         return null;
     }
 };
 
-module.exports = { generateAccessToken, generateRefreshToken, verifyRefreshToken };
+const verifyRefreshToken = (token) => {
+    try {
+        return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    } catch (error) {
+        return null;
+    }
+};
+
+module.exports = {
+    generateAccessToken,
+    generateRefreshToken,
+    verifyAccessToken,
+    verifyRefreshToken
+};
