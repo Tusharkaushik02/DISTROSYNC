@@ -26,6 +26,17 @@ class RedisClient {
         RedisClient.isConnected = false;
         console.error('Redis error:', err.message);
       });
+
+      RedisClient.instance.on("end", () => {
+        RedisClient.isConnected = false;
+        console.log('Redis disconnected');
+      });
+
+      RedisClient.instance.on('reconnecting', () => {
+        RedisClient.isConnected = false;
+        console.log('Redis reconnecting');
+      });
+
     }
     return RedisClient.instance;
   }
