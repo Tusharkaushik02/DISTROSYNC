@@ -19,7 +19,7 @@ const createCompany = async (req, res) => {
 
 const getCompany = async (req, res) => {
     try {
-        const company = await companyService.getCompany(req.user.id);
+        const company = await companyService.getCompany(req.user.id, req.params.companyId);
 
         return res.status(200).json({
             success: true,
@@ -35,7 +35,7 @@ const getCompany = async (req, res) => {
 
 const updateCompany = async (req, res) => {
     try {
-        const company = await companyService.updateCompany(req.user.id, req.body);
+        const company = await companyService.updateCompany(req.user.id, req.body, req.params.companyId);
 
         return res.status(200).json({
             success: true,
@@ -52,7 +52,7 @@ const updateCompany = async (req, res) => {
 
 const deleteCompany = async (req, res) => {
     try {
-        await companyService.deleteCompany(req.user.id);
+        await companyService.deleteCompany(req.user.id, req.params.companyId);
 
         return res.status(200).json({
             success: true,

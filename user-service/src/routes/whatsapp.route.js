@@ -10,11 +10,16 @@ const {
     deleteWhatsAppConfig
 } = require("../controllers/whatsapp.controller");
 
-router
-    .route("/")
-    .post(authMiddleware, createWhatsAppConfig)
-    .get(authMiddleware, getWhatsAppConfig)
-    .put(authMiddleware, updateWhatsAppConfig)
-    .delete(authMiddleware, deleteWhatsAppConfig);
+// Create WhatsApp Config
+router.post("/", authMiddleware, createWhatsAppConfig);
+
+// Get WhatsApp Config
+router.get("/", authMiddleware, getWhatsAppConfig);
+
+// Update WhatsApp Config
+router.patch("/", authMiddleware, updateWhatsAppConfig);
+
+// Delete WhatsApp Config
+router.delete("/", authMiddleware, deleteWhatsAppConfig);
 
 module.exports = router;

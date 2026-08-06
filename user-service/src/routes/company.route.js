@@ -14,13 +14,13 @@ const authMiddleware = require("../middlewares/auth.middleware");
 // Create Company
 router.post("/", authMiddleware, createCompany);
 
-// Get Logged-in User's Company
-router.get("/", authMiddleware, getCompany);
+// Get Company
+router.get("/:companyId", authMiddleware, getCompany);
 
 // Update Company
-router.put("/", authMiddleware, updateCompany);
+router.patch("/:companyId", authMiddleware, updateCompany);
 
 // Delete Company
-router.delete("/", authMiddleware, deleteCompany);
+router.delete("/:companyId", authMiddleware, deleteCompany);
 
 module.exports = router;
