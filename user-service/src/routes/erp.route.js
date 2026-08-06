@@ -10,11 +10,16 @@ const {
     deleteERPConfig
 } = require("../controllers/erp.controller");
 
-router
-    .route("/")
-    .post(authMiddleware, createERPConfig)
-    .get(authMiddleware, getERPConfig)
-    .put(authMiddleware, updateERPConfig)
-    .delete(authMiddleware, deleteERPConfig);
+// Create ERP Config
+router.post("/", authMiddleware, createERPConfig);
+
+// Get ERP Config
+router.get("/", authMiddleware, getERPConfig);
+
+// Update ERP Config
+router.patch("/", authMiddleware, updateERPConfig);
+
+// Delete ERP Config
+router.delete("/", authMiddleware, deleteERPConfig);
 
 module.exports = router;

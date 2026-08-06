@@ -3,49 +3,56 @@ const prisma = require("../config/prisma")
 
 const createCompany = async (userId, companyData) => {
 
-    // 1. Check if user exists
-    const existingUser = await prisma.user.findUnique({
-        where: {
-            id: userId
-        }
-    });
-    if (!existingUser) {
-        throw new Error("User not found");
-    }
+    const {
+        companyName,
+        address,
+        contactEmail,
+        contactPhone,
+    } = companyData;
 
-    // 2. Check if user already belongs to a company
-    if (existingUser.companyId) {
-        throw new Error("User already belongs to a company");
-    }
+    const cleanCompanyName = companyName ? companyName.trim() : "";
 
-    // 3. Validate company information
+    // 1. Validate company information
     if (
-        !companyData.companyName ||
-        companyData.companyName.trim().length < 3 ||
-        companyData.companyName.trim().length > 100 ||
-        (companyData.contactEmail &&
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyData.contactEmail)) ||
-        (companyData.contactPhone &&
-            !/^[0-9]{10}$/.test(companyData.contactPhone))
+        !companyName ||
+        cleanCompanyName.length < 3 ||
+        cleanCompanyName.length > 100 ||
+        (contactEmail &&
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) ||
+        (contactPhone &&
+            !/^[0-9]{10}$/.test(contactPhone))
     ) {
         throw new Error("Invalid company information.");
     }
 
-    // 4. Execute database transaction
-
-
-    //      Create company
-
-    //      Update user's companyId
+    // 2. Execute database transaction
     const company = await prisma.$transaction(async (tx) => {
+
+        // Check if user exists
+        const existingUser = await tx.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                companyId: true
+            }
+        });
+
+        if (!existingUser) {
+            throw new Error("User not found");
+        }
+
+        // Check if user already belongs to a company
+        if (existingUser.companyId) {
+            throw new Error("User already belongs to a company");
+        }
 
         // Create Company
         const newCompany = await tx.company.create({
             data: {
-                companyName: companyData.companyName,
-                address: companyData.address,
-                contactEmail: companyData.contactEmail,
-                contactPhone: companyData.contactPhone,
+                companyName: cleanCompanyName,
+                address,
+                contactEmail,
+                contactPhone,
             }
         });
 
@@ -62,16 +69,14 @@ const createCompany = async (userId, companyData) => {
         return newCompany;
     });
 
-
-    // 5. Return newly created company
-
+    // 3. Return newly created company
     return company;
 
 }
 
 
 
-const getCompany = async (userId) => {
+const getCompany = async (userId, companyId) => {
 
     // 1. Find user
     const existingUser = await prisma.user.findUnique({
@@ -105,7 +110,7 @@ const getCompany = async (userId) => {
     return company;
 };
 
-const updateCompany = async (userId, companyData) => {
+const updateCompany = async (userId, companyData, companyId) => {
 
     // 1. Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -166,7 +171,7 @@ const updateCompany = async (userId, companyData) => {
 };
 
 
-const deleteCompany = async (userId) => {
+const deleteCompany = async (userId, companyId) => {
 
     // 1. Check if user exists
     const existingUser = await prisma.user.findUnique({
