@@ -1,6 +1,6 @@
 require('dotenv').config(); // loads user-service/.env
 const app = require('./src/app');
-const { redis } = require('./src/config/redis');
+// const { redis } = require('./src/config/redis');
 
 const startServer = async () => {
     try {
@@ -12,7 +12,7 @@ const startServer = async () => {
         const cleanup = async () => {
             console.log('Received kill signal, shutting down gracefully...');
 
-            await redis.quit();
+            // await redis.quit();
 
             server.close(() => {
                 console.log('Closed out remaining connections');

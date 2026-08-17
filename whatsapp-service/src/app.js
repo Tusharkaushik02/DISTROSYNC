@@ -3,7 +3,7 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 
 const app = express();
-const webhookRoutes = require("./routes/webhook.routes");
+const webhookRoutes = require("./routes/webhook.router");
 
 app.use(express.json());
 app.use(cookieParser());
