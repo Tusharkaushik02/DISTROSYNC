@@ -31,8 +31,34 @@ const verifyWebhook = async (req, res) => {
 
 // POST /webhook  → actual events
 
+const receiveWebhook = async (req, res) => {
+    try {
+
+        console.log("========== WHATSAPP WEBHOOK ==========");
+
+        console.log(
+            JSON.stringify(req.body, null, 2)
+        );
+
+        console.log("======================================");
+
+        // Acknowledge Meta
+        return res.sendStatus(200);
+
+    } catch (error) {
+
+        console.error(
+            "WhatsApp webhook error:",
+            error
+        );
+
+        return res.sendStatus(500);
+    }
+};
+
 module.exports = {
-    verifyWebhook
+    verifyWebhook,
+    receiveWebhook
 };
 
 
