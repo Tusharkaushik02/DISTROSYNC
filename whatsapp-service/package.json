@@ -25,6 +25,7 @@
     "prisma": "^6.19.3",
     "redis": "^6.1.0",
     "sendmail": "^1.6.1",
+    "twilio": "^6.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

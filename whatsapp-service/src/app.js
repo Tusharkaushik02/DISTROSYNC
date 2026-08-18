@@ -5,11 +5,13 @@ const helmet = require('helmet');
 const app = express();
 const webhookRoutes = require("./routes/webhook.router");
 
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
 
 app.use("/api/whatsapp", webhookRoutes);
+app.use("/whatsapp", webhookRoutes); // Alias so https://<ngrok>/whatsapp also works
 
 
 
