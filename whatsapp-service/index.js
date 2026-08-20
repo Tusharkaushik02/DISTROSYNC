@@ -1,6 +1,5 @@
-require('dotenv').config(); // loads user-service/.env
+require('dotenv').config();
 const app = require('./src/app');
-// const { redis } = require('./src/config/redis');
 
 const startServer = async () => {
     try {
@@ -8,11 +7,9 @@ const startServer = async () => {
             console.log(`${process.env.SERVICE_NAME} is running on port ${process.env.PORT} in ${process.env.NODE_ENV} mode`);
         });
 
-        // Graceful shutdown
+        // Handle graceful shutdown
         const cleanup = async () => {
             console.log('Received kill signal, shutting down gracefully...');
-
-            // await redis.quit();
 
             server.close(() => {
                 console.log('Closed out remaining connections');

@@ -1,44 +1,31 @@
 const whatsappService = require("../services/whatsapp.service");
 
-// ─────────────────────────────────────────────────────────────
-// GET  /webhook  → Meta verification (kept for future production use)
-// ─────────────────────────────────────────────────────────────
-
+// GET /webhook — Meta verification
 const verifyWebhook = async (req, res) => {
     try {
         const mode = req.query["hub.mode"];
         const token = req.query["hub.verify_token"];
         const challenge = req.query["hub.challenge"];
 
-        // 1. Check if Meta is requesting webhook verification
         if (mode !== "subscribe") {
             return res.sendStatus(403);
         }
 
-        // 2. Check verify token
         if (token !== process.env.WHATSAPP_VERIFY_TOKEN) {
             return res.sendStatus(403);
         }
 
-        // 3. Verification successful
         return res.status(200).send(challenge);
 
     } catch (error) {
-
         console.error("Webhook verification error:", error);
-
         return res.sendStatus(500);
     }
 };
 
-
-// ─────────────────────────────────────────────────────────────
-// POST /webhook  → incoming WhatsApp message (Twilio Sandbox)
-// ─────────────────────────────────────────────────────────────
-
+// POST /webhook — Handle incoming WhatsApp webhook
 const receiveWebhook = async (req, res) => {
     try {
-        // Parse the incoming Twilio webhook payload
         const message = whatsappService.parseIncomingMessage(req.body);
 
         console.log("========== WHATSAPP MESSAGE ==========");
@@ -49,7 +36,6 @@ const receiveWebhook = async (req, res) => {
         if (message.profileName) console.log("ProfileName:", message.profileName);
         console.log("======================================");
 
-        // Reply with TwiML response
         const twiml = whatsappService.createReply("Got your message! 🚀");
 
         return res.type("text/xml").status(200).send(twiml);
@@ -60,17 +46,12 @@ const receiveWebhook = async (req, res) => {
     }
 };
 
-
-// ─────────────────────────────────────────────────────────────
-// POST /send  → send an outgoing WhatsApp message
-// ─────────────────────────────────────────────────────────────
-
+// POST /send — Send outgoing WhatsApp message
 const sendMessage = async (req, res) => {
     try {
         const { to, message, body, contentSid, contentVariables } = req.body;
         const messageText = message || body;
 
-        // Validate required fields
         if (!to) {
             return res.status(400).json({
                 success: false,
@@ -105,7 +86,6 @@ const sendMessage = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error("WhatsApp send error:", error);
 
         const statusCode = error.status || 500;
@@ -117,7 +97,6 @@ const sendMessage = async (req, res) => {
         });
     }
 };
-
 
 module.exports = {
     verifyWebhook,

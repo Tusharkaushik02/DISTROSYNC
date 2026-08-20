@@ -3,9 +3,8 @@ const Redis = require('ioredis');
 class RedisClient {
   static instance = null;
   static isConnected = false;
-  constructor() {
-    //private constructor to prevent instantiation
-  }
+  // Private constructor to prevent direct instantiation
+  constructor() {}
 
   static getInstance() {
     if (!RedisClient.instance) {
