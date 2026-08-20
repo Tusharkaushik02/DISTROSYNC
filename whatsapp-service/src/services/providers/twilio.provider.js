@@ -3,10 +3,7 @@ const { MessagingResponse } = require("twilio").twiml;
 
 let client = null;
 
-/**
- * Initialize the Twilio client.
- * Validates required env vars and creates the client singleton.
- */
+// Initialize Twilio client singleton
 const initClient = () => {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -30,9 +27,7 @@ const initClient = () => {
     return client;
 };
 
-/**
- * Get the Twilio client, initializing if needed.
- */
+// Get or initialize Twilio client
 const getClient = () => {
     if (!client) {
         initClient();
@@ -40,13 +35,7 @@ const getClient = () => {
     return client;
 };
 
-/**
- * Send a WhatsApp text message via Twilio.
- *
- * @param {string} to - Recipient in Twilio format, e.g. "whatsapp:+919876543210"
- * @param {string} body - Message text
- * @returns {Promise<object>} Twilio message response
- */
+// Send WhatsApp message via Twilio
 const sendMessage = async (to, body, options = {}) => {
     if (!to) {
         throw new Error("Recipient 'to' is required");
@@ -56,10 +45,9 @@ const sendMessage = async (to, body, options = {}) => {
         throw new Error("Either message 'body' or 'contentSid' is required");
     }
 
-    // Helper to sanitize phone number into E.164 with whatsapp: prefix
+    // Format phone number with whatsapp: prefix
     const formatNumber = (num) => {
         let clean = num.replace(/^whatsapp:/i, '').trim();
-        // Remove parentheses, spaces, dashes
         clean = clean.replace(/[\s\(\)\-]/g, '');
         if (!clean.startsWith('+')) {
             clean = `+${clean}`;
@@ -114,15 +102,7 @@ const sendMessage = async (to, body, options = {}) => {
     }
 };
 
-/**
- * Parse an incoming Twilio webhook payload into a standardized message object.
- *
- * Twilio sends form-encoded (application/x-www-form-urlencoded) POST data.
- * Express must have express.urlencoded({ extended: false }) middleware active.
- *
- * @param {object} body - req.body from the Express request
- * @returns {object} Standardized message fields
- */
+// Parse incoming Twilio webhook payload
 const parseIncomingMessage = (body) => {
     const payload = body || {};
 
@@ -141,12 +121,7 @@ const parseIncomingMessage = (body) => {
     };
 };
 
-/**
- * Create a TwiML MessagingResponse XML string.
- *
- * @param {string} text - Reply message text
- * @returns {string} TwiML XML string
- */
+// Generate TwiML XML response string
 const createTwimlResponse = (text) => {
     const twiml = new MessagingResponse();
 

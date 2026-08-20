@@ -11,7 +11,7 @@ app.use(cookieParser());
 app.use(helmet());
 
 app.use("/api/whatsapp", webhookRoutes);
-app.use("/whatsapp", webhookRoutes); // Alias so https://<ngrok>/whatsapp also works
+app.use("/whatsapp", webhookRoutes);
 
 
 

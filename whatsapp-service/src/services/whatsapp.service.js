@@ -1,36 +1,19 @@
 const twilioProvider = require("./providers/twilio.provider");
 
-// Currently using Twilio for development.
-// Swap to metaProvider when switching to Meta Cloud API for production.
+// Active WhatsApp provider (Twilio)
 const provider = twilioProvider;
 
-/**
- * Send a WhatsApp message through the active provider.
- *
- * @param {string} to - Recipient (e.g. "whatsapp:+919876543210")
- * @param {string} body - Message text
- * @returns {Promise<object>} Provider response
- */
+// Send WhatsApp message via provider
 const sendMessage = async (to, body, options = {}) => {
     return provider.sendMessage(to, body, options);
 };
 
-/**
- * Parse an incoming webhook payload into standardized fields.
- *
- * @param {object} reqBody - req.body from Express
- * @returns {object} Standardized message object
- */
+// Parse incoming webhook payload
 const parseIncomingMessage = (reqBody) => {
     return provider.parseIncomingMessage(reqBody);
 };
 
-/**
- * Create a provider-appropriate reply response.
- *
- * @param {string} text - Reply text
- * @returns {string} Formatted response (TwiML for Twilio, JSON for Meta)
- */
+// Create reply response
 const createReply = (text) => {
     return provider.createTwimlResponse(text);
 };
