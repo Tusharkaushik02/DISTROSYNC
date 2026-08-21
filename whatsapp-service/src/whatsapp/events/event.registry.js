@@ -1,17 +1,6 @@
-/**
- * Event registry — maps (eventType, messageType) pairs to dot-notation event identifiers.
- *
- * This is the single source of truth for all recognized event strings.
- * Adding a new event means adding one entry here.
- */
-
 const { EVENT_TYPES, MESSAGE_TYPES } = require('./event.types');
 
-/**
- * Registry entries.
- * Key = dot-notation event string
- * Value = { eventType, messageType }
- */
+// Registry mapping (eventType, messageType) pairs to dot-notation event strings
 const EVENT_REGISTRY = Object.freeze({
     'message.text':        { eventType: EVENT_TYPES.MESSAGE,     messageType: MESSAGE_TYPES.TEXT },
     'message.image':       { eventType: EVENT_TYPES.MESSAGE,     messageType: MESSAGE_TYPES.IMAGE },
@@ -28,13 +17,7 @@ const EVENT_REGISTRY = Object.freeze({
     'unknown':             { eventType: EVENT_TYPES.UNKNOWN,     messageType: null },
 });
 
-/**
- * Reverse lookup: find the event string for a given (eventType, messageType) pair.
- *
- * @param {string} eventType
- * @param {string|null} messageType
- * @returns {string} Dot-notation event string, or "unknown"
- */
+// Resolve event string from eventType and messageType
 function resolveEventString(eventType, messageType) {
     for (const [eventString, entry] of Object.entries(EVENT_REGISTRY)) {
         if (entry.eventType === eventType && entry.messageType === messageType) {

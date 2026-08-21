@@ -1,31 +1,13 @@
-/**
- * Twilio signature validation middleware.
- *
- * Authenticates that the incoming request genuinely originated from Twilio
- * using HMAC-SHA1 verification of the X-Twilio-Signature header.
- *
- * URL construction handles reverse proxy scenarios:
- *   1. TWILIO_WEBHOOK_URL env var override (recommended for production)
- *   2. X-Forwarded-Proto header (behind proxy/LB)
- *   3. req.protocol fallback (direct connection)
- */
-
+// Twilio HMAC-SHA1 signature authentication middleware
 const twilio = require('twilio');
 const { AuthenticationError } = require('../errors/webhook.errors');
 
-/**
- * Build the full URL that Twilio used when computing its HMAC signature.
- *
- * @param {import('express').Request} req
- * @returns {string}
- */
+// Build the request URL used for signature verification
 function buildWebhookUrl(req) {
-    // Explicit env var override (only if not default placeholder)
     if (process.env.TWILIO_WEBHOOK_URL && !process.env.TWILIO_WEBHOOK_URL.includes('your-ngrok-url')) {
         return process.env.TWILIO_WEBHOOK_URL;
     }
 
-    // Behind reverse proxy (e.g. ngrok, load balancer): trust X-Forwarded headers
     const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
     const host = req.headers['x-forwarded-host'] || req.get('host');
     const path = req.originalUrl;
@@ -33,13 +15,7 @@ function buildWebhookUrl(req) {
     return `${protocol}://${host}${path}`;
 }
 
-/**
- * Express middleware — validates Twilio signature.
- *
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @param {import('express').NextFunction} next
- */
+// Validate Twilio signature from X-Twilio-Signature header
 function twilioSignatureMiddleware(req, res, next) {
     const signature = req.headers['x-twilio-signature'];
 

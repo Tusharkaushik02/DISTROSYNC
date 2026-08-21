@@ -1,9 +1,4 @@
-/**
- * Canonical event type and message type constants.
- *
- * eventType  = what kind of webhook event (message vs status)
- * messageType = what kind of content (text vs image vs audio)
- */
+// Event and message type constants
 
 const EVENT_TYPES = Object.freeze({
     MESSAGE: 'message',

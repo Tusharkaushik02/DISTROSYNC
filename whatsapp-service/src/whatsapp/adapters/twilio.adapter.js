@@ -1,20 +1,8 @@
-/**
- * Twilio adapter — normalizes Twilio-specific webhook payloads into
- * provider-independent canonical events.
- *
- * This is the provider boundary. Everything downstream has zero knowledge
- * of Twilio field names.
- */
-
+// Twilio payload adapter and normalizer
 const { createCanonicalEvent } = require('../models/canonical-event');
 const { NormalizationError } = require('../errors/webhook.errors');
 
-/**
- * Strip the "whatsapp:" prefix and normalize to E.164 format.
- *
- * @param {string} phone — e.g. "whatsapp:+919876543210"
- * @returns {string} — e.g. "+919876543210"
- */
+// Strip whatsapp: prefix and normalize phone number
 function normalizePhone(phone) {
     if (!phone) return null;
 
@@ -27,14 +15,7 @@ function normalizePhone(phone) {
     return cleaned || null;
 }
 
-/**
- * Extract media items from Twilio payload.
- *
- * Twilio sends media as indexed fields: MediaUrl0, MediaContentType0, MediaUrl1, etc.
- *
- * @param {object} payload — Validated Twilio payload
- * @returns {Array<{url: string, contentType: string, index: number}>|null}
- */
+// Extract media items from indexed fields (MediaUrl0, MediaContentType0, etc.)
 function extractMedia(payload) {
     const numMedia = parseInt(payload.NumMedia, 10) || 0;
 
@@ -53,12 +34,7 @@ function extractMedia(payload) {
     return media.length > 0 ? media : null;
 }
 
-/**
- * Normalize a validated Twilio webhook payload into a canonical event.
- *
- * @param {object} validatedPayload — Payload that passed Zod validation
- * @returns {object} Canonical event (without eventType/messageType — those are set by classifiers)
- */
+// Normalize validated Twilio payload into canonical event
 function normalize(validatedPayload) {
     try {
         const media = extractMedia(validatedPayload);
