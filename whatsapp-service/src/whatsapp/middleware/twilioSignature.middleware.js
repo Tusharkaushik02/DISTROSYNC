@@ -20,14 +20,14 @@ const { AuthenticationError } = require('../errors/webhook.errors');
  * @returns {string}
  */
 function buildWebhookUrl(req) {
-    // Preferred: explicit env var avoids all proxy ambiguity
-    if (process.env.TWILIO_WEBHOOK_URL) {
+    // Explicit env var override (only if not default placeholder)
+    if (process.env.TWILIO_WEBHOOK_URL && !process.env.TWILIO_WEBHOOK_URL.includes('your-ngrok-url')) {
         return process.env.TWILIO_WEBHOOK_URL;
     }
 
-    // Behind reverse proxy: trust X-Forwarded-Proto
+    // Behind reverse proxy (e.g. ngrok, load balancer): trust X-Forwarded headers
     const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host = req.get('host');
+    const host = req.headers['x-forwarded-host'] || req.get('host');
     const path = req.originalUrl;
 
     return `${protocol}://${host}${path}`;
@@ -49,9 +49,9 @@ function twilioSignatureMiddleware(req, res, next) {
 
     const authToken = process.env.TWILIO_AUTH_TOKEN;
 
-    if (!authToken) {
-        console.error('[TwilioSignature] TWILIO_AUTH_TOKEN is not set');
-        return next(new AuthenticationError('Server configuration error', 500));
+    if (!authToken || authToken === 'your_twilio_auth_token') {
+        console.error('[TwilioSignature] TWILIO_AUTH_TOKEN is not set or is still placeholder in .env');
+        return next(new AuthenticationError('Server configuration error: TWILIO_AUTH_TOKEN missing in .env', 500));
     }
 
     const url = buildWebhookUrl(req);
@@ -64,6 +64,10 @@ function twilioSignatureMiddleware(req, res, next) {
     );
 
     if (!isValid) {
+        console.warn(`[TwilioSignature] Validation failed (403 Forbidden)!`);
+        console.warn(`  Evaluated URL: ${url}`);
+        console.warn(`  Received Signature: ${signature}`);
+        console.warn(`  TWILIO_AUTH_TOKEN length: ${authToken ? authToken.length : 0}`);
         return next(new AuthenticationError('Invalid Twilio signature', 403));
     }
 

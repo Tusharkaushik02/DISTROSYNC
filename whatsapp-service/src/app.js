@@ -6,6 +6,7 @@ const app = express();
 const webhookRoutes = require("./routes/webhook.router");
 const webhookPipelineRoutes = require("./whatsapp/routes/webhook.routes");
 
+app.enable('trust proxy');
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
