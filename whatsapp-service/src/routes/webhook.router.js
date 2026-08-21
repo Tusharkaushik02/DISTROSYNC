@@ -1,4 +1,5 @@
 const express = require("express");
+const validateTwilioRequest = require("./middleware/twilioAuth");
 
 const {
     verifyWebhook,
@@ -9,9 +10,8 @@ const {
 const router = express.Router();
 
 router.get("/webhook", verifyWebhook);
-router.post("/webhook", receiveWebhook);
-router.post("/whatsapp", receiveWebhook);
-router.post("/", receiveWebhook);
-router.post("/send", sendMessage);
+router.post("/webhook", express.urlencoded({ extended: false }), validateTwilioRequest, receiveWebhook);
+router.post("/whatsapp", express.urlencoded({ extended: false }), validateTwilioRequest, receiveWebhook);
+router.post("/", express.urlencoded({ extended: false }), validateTwilioRequest, receiveWebhook);
 
 module.exports = router;
