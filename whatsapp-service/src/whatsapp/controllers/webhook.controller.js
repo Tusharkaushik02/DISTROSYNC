@@ -1,11 +1,4 @@
-/**
- * Webhook controller — thin orchestrator for the inbound pipeline.
- *
- * Sequence: validate → normalize → classify (event + message) → dispatch
- *
- * Each step is a pure function call. The controller merely wires them together.
- */
-
+// Webhook controller — orchestrates validate, normalize, classify, and dispatch
 const { validate } = require('../validation/webhook.validator');
 const { normalize } = require('../adapters/twilio.adapter');
 const { classifyEventType } = require('../classification/event.classifier');
@@ -13,13 +6,7 @@ const { classifyMessageType } = require('../classification/message.classifier');
 const { dispatch } = require('../events/event.dispatcher');
 const { ValidationError } = require('../errors/webhook.errors');
 
-/**
- * POST handler — processes an incoming Twilio WhatsApp webhook.
- *
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @param {import('express').NextFunction} next
- */
+// Inbound webhook request handler
 async function handleWebhook(req, res, next) {
     try {
         // ── Stage 1: Schema Validation ────────────────────────────────
@@ -33,7 +20,9 @@ async function handleWebhook(req, res, next) {
         }
 
         // ── Stage 2: Normalization ────────────────────────────────────
+        console.log("[Webhook] Validation result:", validationResult);
         const canonicalEvent = normalize(validationResult.data);
+        console.log("[Webhook] Normalized canonical event:", canonicalEvent);
 
         // ── Stage 3: Event Classification ─────────────────────────────
         canonicalEvent.eventType = classifyEventType(canonicalEvent);

@@ -1,18 +1,7 @@
-/**
- * Webhook payload validation runner.
- *
- * Validates a Twilio webhook payload against the appropriate Zod schema
- * and returns a structured result.
- */
-
+// Webhook payload validation runner
 const { detectWebhookType, getSchemaForType } = require('./webhook.schema');
 
-/**
- * Validate a Twilio webhook request body.
- *
- * @param {object} reqBody — The raw req.body from Twilio
- * @returns {{ valid: true, data: object, webhookType: string } | { valid: false, errors: Array<{field: string, code: string, message: string}> }}
- */
+// Validate Twilio webhook request body against Zod schemas
 function validate(reqBody) {
     if (!reqBody || typeof reqBody !== 'object' || Object.keys(reqBody).length === 0) {
         return {
