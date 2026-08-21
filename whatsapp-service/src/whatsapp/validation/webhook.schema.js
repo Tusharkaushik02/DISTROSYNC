@@ -1,23 +1,10 @@
-/**
- * Zod v4 validation schemas for Twilio WhatsApp webhook payloads.
- *
- * Three discriminated schemas based on webhook type:
- *   - Text Message
- *   - Media Message
- *   - Status Callback
- *
- * Auto-detection logic determines which schema to apply.
- */
-
+// Zod schemas for Twilio WhatsApp webhook payloads
 const { z } = require('zod');
-
-// ── Shared field schemas ──────────────────────────────────────────────
 
 const sidField = z.string().min(1, 'SID is required');
 const phoneField = z.string().min(1, 'Phone number is required');
 
-// ── Text Message Schema ───────────────────────────────────────────────
-
+// Text message schema
 const textMessageSchema = z.object({
     MessageSid: sidField,
     AccountSid: sidField,
@@ -37,8 +24,7 @@ const textMessageSchema = z.object({
     MessageType: z.string().optional(),
 }).passthrough();
 
-// ── Media Message Schema ──────────────────────────────────────────────
-
+// Media message schema
 const mediaMessageSchema = z.object({
     MessageSid: sidField,
     AccountSid: sidField,
@@ -50,8 +36,6 @@ const mediaMessageSchema = z.object({
     ),
     MediaContentType0: z.string().min(1, 'MediaContentType0 is required for media messages'),
     MediaUrl0: z.string().url('MediaUrl0 must be a valid URL'),
-
-    // Caption is optional for media messages
     Body: z.string().optional(),
     ProfileName: z.string().optional(),
     WaId: z.string().optional(),
@@ -63,14 +47,11 @@ const mediaMessageSchema = z.object({
     MessageType: z.string().optional(),
 }).passthrough();
 
-// ── Status Callback Schema ────────────────────────────────────────────
-
+// Status callback schema
 const statusCallbackSchema = z.object({
     MessageSid: sidField,
     AccountSid: sidField,
     MessageStatus: z.string().min(1, 'MessageStatus is required for status callbacks'),
-
-    // These may or may not be present for status callbacks
     From: z.string().optional(),
     To: z.string().optional(),
     ChannelPrefix: z.string().optional(),
@@ -79,8 +60,7 @@ const statusCallbackSchema = z.object({
     SmsStatus: z.string().optional(),
 }).passthrough();
 
-// ── Location Message Schema ───────────────────────────────────────────
-
+// Location message schema
 const locationMessageSchema = z.object({
     MessageSid: sidField,
     AccountSid: sidField,
@@ -88,8 +68,6 @@ const locationMessageSchema = z.object({
     To: phoneField,
     Latitude: z.string().min(1, 'Latitude is required for location messages'),
     Longitude: z.string().min(1, 'Longitude is required for location messages'),
-
-    // Optional fields
     Body: z.string().optional(),
     ProfileName: z.string().optional(),
     WaId: z.string().optional(),
@@ -102,16 +80,13 @@ const locationMessageSchema = z.object({
     MessageType: z.string().optional(),
 }).passthrough();
 
-// ── Contact Message Schema ────────────────────────────────────────────
-
+// Contact message schema
 const contactMessageSchema = z.object({
     MessageSid: sidField,
     AccountSid: sidField,
     From: phoneField,
     To: phoneField,
     vCard: z.string().min(1, 'vCard is required for contact messages'),
-
-    // Optional fields
     Body: z.string().optional(),
     ProfileName: z.string().optional(),
     WaId: z.string().optional(),
@@ -124,15 +99,12 @@ const contactMessageSchema = z.object({
     MessageType: z.string().optional(),
 }).passthrough();
 
-// ── Interactive Message Schema ────────────────────────────────────────
-
+// Interactive message schema
 const interactiveMessageSchema = z.object({
     MessageSid: sidField,
     AccountSid: sidField,
     From: phoneField,
     To: phoneField,
-
-    // Optional fields
     Body: z.string().optional(),
     ButtonText: z.string().optional(),
     ListId: z.string().optional(),
@@ -147,58 +119,27 @@ const interactiveMessageSchema = z.object({
     MessageType: z.string().optional(),
 }).passthrough();
 
-// ── Webhook type detection ────────────────────────────────────────────
-
-/**
- * Detect which webhook type a payload represents.
- *
- * Order matters:
- *   1. Has MessageStatus and no Body/NumMedia → status
- *   2. Has NumMedia > 0 → media
- *   3. Has Latitude and Longitude → location
- *   4. Has vCard → contact
- *   5. Has ButtonText or ListId → interactive
- *   6. Default → text (general message)
- *
- * @param {object} body — Raw req.body from Twilio
- * @returns {'status' | 'media' | 'location' | 'contact' | 'interactive' | 'text'}
- */
+// Detect which webhook type a payload represents
 function detectWebhookType(body) {
-    // Status callback: has MessageStatus, no meaningful message content
     if (body.MessageStatus && !body.Body && (!body.NumMedia || body.NumMedia === '0')) {
         return 'status';
     }
-
-    // Media message: has NumMedia >= 1
     if (body.NumMedia && parseInt(body.NumMedia, 10) >= 1) {
         return 'media';
     }
-
-    // Location message: has Latitude and Longitude
     if (body.Latitude && body.Longitude) {
         return 'location';
     }
-
-    // Contact message: has vCard
     if (body.vCard) {
         return 'contact';
     }
-
-    // Interactive message: button press or list selection
     if (body.ButtonText || body.ListId) {
         return 'interactive';
     }
-
-    // Default: text/general message
     return 'text';
 }
 
-/**
- * Get the appropriate schema for a webhook type.
- *
- * @param {'status' | 'media' | 'location' | 'contact' | 'interactive' | 'text'} webhookType
- * @returns {z.ZodObject}
- */
+// Get the appropriate schema for a webhook type
 function getSchemaForType(webhookType) {
     switch (webhookType) {
         case 'status': return statusCallbackSchema;

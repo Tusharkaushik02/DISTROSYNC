@@ -1,18 +1,7 @@
-/**
- * Message type classifier — registry pattern.
- *
- * An ordered array of classifiers, each with a type and a test function.
- * The first classifier whose test returns true determines the messageType.
- *
- * Adding a new message type = pushing one object into MESSAGE_TYPE_CLASSIFIERS.
- */
-
+// Message type classifier registry
 const { MESSAGE_TYPES, EVENT_TYPES } = require('../events/event.types');
 
-/**
- * Classifier registry.
- * Evaluated in priority order — first match wins.
- */
+// Evaluated in priority order — first match wins
 const MESSAGE_TYPE_CLASSIFIERS = [
     {
         type: MESSAGE_TYPES.IMAGE,
@@ -91,15 +80,7 @@ const MESSAGE_TYPE_CLASSIFIERS = [
     },
 ];
 
-/**
- * Classify the message type of a canonical event.
- *
- * Only applies when eventType is "message" or "interactive".
- * For status events, returns null.
- *
- * @param {object} canonicalEvent — Normalized canonical event with eventType set
- * @returns {string|null} One of MESSAGE_TYPES values, or null for non-message events
- */
+// Classify message type from canonical event
 function classifyMessageType(canonicalEvent) {
     // Status and unknown events don't have message types
     if (canonicalEvent.eventType === EVENT_TYPES.STATUS ||
