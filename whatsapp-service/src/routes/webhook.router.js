@@ -1,5 +1,5 @@
 const express = require("express");
-const validateTwilioRequest = require("./middleware/twilioAuth");
+const validateTwilioRequest = require("../middleware/twiliio.middleware");
 
 const {
     verifyWebhook,
