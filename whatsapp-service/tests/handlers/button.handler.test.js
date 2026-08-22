@@ -1,6 +1,6 @@
-const { buttonHandler } = require('../../src/whatsapp/handlers/button.handler');
-const { BUTTON_ACTIONS, resolveButtonAction } = require('../../src/whatsapp/handlers/button/button.registry');
-const { EVENT_TYPES } = require('../../src/whatsapp/events/event.types');
+const { buttonHandler } = require('../../src/modules/whatsapp/application/handlers/button.handler');
+const { BUTTON_ACTIONS, resolveButtonAction } = require('../../src/modules/whatsapp/application/handlers/button/button.registry');
+const { EVENT_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
 
 function makeButtonEvent(buttonText, listId) {
     return {

@@ -1,4 +1,4 @@
-const twilioProvider = require("./providers/twilio.provider");
+const twilioProvider = require("../../infrastructure/providers/twilio/twilio.provider");
 
 // Active WhatsApp provider (Twilio)
 const provider = twilioProvider;
