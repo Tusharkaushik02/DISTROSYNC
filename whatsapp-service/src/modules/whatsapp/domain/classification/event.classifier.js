@@ -1,5 +1,5 @@
 // Event type classifier (message, interactive, status, unknown)
-const { EVENT_TYPES } = require('../events/event.types');
+const { EVENT_TYPES } = require('../../application/events/event.types');
 
 // Classify the top-level event type
 function classifyEventType(canonicalEvent) {

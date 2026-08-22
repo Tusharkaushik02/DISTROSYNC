@@ -1,4 +1,4 @@
-const { createHandlerResult } = require('../../src/whatsapp/handlers/handler.result');
+const { createHandlerResult } = require('../../src/modules/whatsapp/application/handlers/handler.result');
 
 describe('Handler Result Factory', () => {
     it('should create result with all required fields', () => {

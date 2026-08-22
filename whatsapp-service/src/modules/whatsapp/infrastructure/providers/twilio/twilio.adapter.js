@@ -1,6 +1,6 @@
 // Twilio payload adapter and normalizer
-const { createCanonicalEvent } = require('../models/canonical-event');
-const { NormalizationError } = require('../errors/webhook.errors');
+const { createCanonicalEvent } = require('../../../domain/models/canonical-event');
+const { NormalizationError } = require('../../../domain/errors/webhook.errors');
 
 // Strip whatsapp: prefix and normalize phone number
 function normalizePhone(phone) {

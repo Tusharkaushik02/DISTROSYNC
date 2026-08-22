@@ -8,7 +8,7 @@ const {
     ValidationError,
     NormalizationError,
     ClassificationError,
-} = require('../../src/whatsapp/errors/webhook.errors');
+} = require('../../src/modules/whatsapp/domain/errors/webhook.errors');
 
 describe('WebhookError hierarchy', () => {
 

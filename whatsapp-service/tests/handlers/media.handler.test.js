@@ -1,5 +1,5 @@
-const { mediaHandler, identifyMediaType } = require('../../src/whatsapp/handlers/media.handler');
-const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/whatsapp/events/event.types');
+const { mediaHandler, identifyMediaType } = require('../../src/modules/whatsapp/application/handlers/media.handler');
+const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
 
 function makeMediaEvent(contentType, messageType) {
     return {

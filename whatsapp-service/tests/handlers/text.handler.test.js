@@ -1,5 +1,5 @@
-const { textHandler, extractText, buildTextContext } = require('../../src/whatsapp/handlers/text.handler');
-const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/whatsapp/events/event.types');
+const { textHandler, extractText, buildTextContext } = require('../../src/modules/whatsapp/application/handlers/text.handler');
+const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
 
 function makeTextEvent(body) {
     return {

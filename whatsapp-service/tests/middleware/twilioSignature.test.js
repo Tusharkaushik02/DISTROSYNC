@@ -2,8 +2,8 @@
  * Tests for the Twilio signature validation middleware.
  */
 
-const { twilioSignatureMiddleware, buildWebhookUrl } = require('../../src/whatsapp/middleware/twilioSignature.middleware');
-const { AuthenticationError } = require('../../src/whatsapp/errors/webhook.errors');
+const { twilioSignatureMiddleware, buildWebhookUrl } = require('../../src/modules/whatsapp/presentation/middleware/twilioSignature.middleware');
+const { AuthenticationError } = require('../../src/modules/whatsapp/domain/errors/webhook.errors');
 
 // Mock twilio module
 jest.mock('twilio', () => {
