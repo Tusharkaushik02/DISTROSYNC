@@ -1,6 +1,6 @@
 // Twilio HMAC-SHA1 signature authentication middleware
 const twilio = require('twilio');
-const { AuthenticationError } = require('../errors/webhook.errors');
+const { AuthenticationError } = require('../../domain/errors/webhook.errors');
 
 // Build the request URL used for signature verification
 function buildWebhookUrl(req) {

@@ -1,4 +1,4 @@
-const { EVENT_TYPES, MESSAGE_TYPES } = require('../events/event.types');
+const { EVENT_TYPES, MESSAGE_TYPES } = require('../../application/events/event.types');
 
 // Build provider-independent canonical event structure
 function createCanonicalEvent(data) {

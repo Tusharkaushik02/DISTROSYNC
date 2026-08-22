@@ -1,10 +1,10 @@
 // Webhook controller — orchestrates validate, normalize, classify, dispatch, and handle
-const { validate } = require('../validation/webhook.validator');
-const { normalize } = require('../adapters/twilio.adapter');
-const { classifyEventType } = require('../classification/event.classifier');
-const { classifyMessageType } = require('../classification/message.classifier');
-const { dispatch, handle } = require('../events/event.dispatcher');
-const { ValidationError } = require('../errors/webhook.errors');
+const { validate } = require('../../validation/webhook.validator');
+const { normalize } = require('../../infrastructure/providers/twilio/twilio.adapter');
+const { classifyEventType } = require('../../domain/classification/event.classifier');
+const { classifyMessageType } = require('../../domain/classification/message.classifier');
+const { dispatch, handle } = require('../../application/events/event.dispatcher');
+const { ValidationError } = require('../../domain/errors/webhook.errors');
 
 // Inbound webhook request handler
 async function handleWebhook(req, res, next) {

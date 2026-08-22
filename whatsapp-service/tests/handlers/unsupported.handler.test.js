@@ -1,5 +1,5 @@
-const { unsupportedHandler } = require('../../src/whatsapp/handlers/unsupported.handler');
-const { EVENT_TYPES } = require('../../src/whatsapp/events/event.types');
+const { unsupportedHandler } = require('../../src/modules/whatsapp/application/handlers/unsupported.handler');
+const { EVENT_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
 
 describe('Unsupported Handler', () => {
     it('should reject status events', () => {

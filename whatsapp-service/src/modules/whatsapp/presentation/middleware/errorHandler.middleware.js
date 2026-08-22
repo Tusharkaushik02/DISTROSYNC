@@ -1,5 +1,5 @@
 // Centralized webhook error handling middleware
-const { WebhookError } = require('../errors/webhook.errors');
+const { WebhookError } = require('../../domain/errors/webhook.errors');
 
 function webhookErrorHandler(err, req, res, next) {
     if (err instanceof WebhookError) {

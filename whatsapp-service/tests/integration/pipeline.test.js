@@ -5,11 +5,11 @@
  * for all 12 scenarios from the requirements.
  */
 
-const { validate } = require('../../src/whatsapp/validation/webhook.validator');
-const { normalize } = require('../../src/whatsapp/adapters/twilio.adapter');
-const { classifyEventType } = require('../../src/whatsapp/classification/event.classifier');
-const { classifyMessageType } = require('../../src/whatsapp/classification/message.classifier');
-const { dispatch } = require('../../src/whatsapp/events/event.dispatcher');
+const { validate } = require('../../src/modules/whatsapp/validation/webhook.validator');
+const { normalize } = require('../../src/modules/whatsapp/infrastructure/providers/twilio/twilio.adapter');
+const { classifyEventType } = require('../../src/modules/whatsapp/domain/classification/event.classifier');
+const { classifyMessageType } = require('../../src/modules/whatsapp/domain/classification/message.classifier');
+const { dispatch } = require('../../src/modules/whatsapp/application/events/event.dispatcher');
 
 /**
  * Run the full pipeline on a raw Twilio payload.

@@ -1,5 +1,5 @@
 // Message type classifier registry
-const { MESSAGE_TYPES, EVENT_TYPES } = require('../events/event.types');
+const { MESSAGE_TYPES, EVENT_TYPES } = require('../../application/events/event.types');
 
 // Evaluated in priority order — first match wins
 const MESSAGE_TYPE_CLASSIFIERS = [

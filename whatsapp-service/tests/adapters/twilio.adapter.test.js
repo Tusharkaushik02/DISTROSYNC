@@ -2,7 +2,7 @@
  * Tests for the Twilio adapter (normalizer).
  */
 
-const { normalize, normalizePhone, extractMedia } = require('../../src/whatsapp/adapters/twilio.adapter');
+const { normalize, normalizePhone, extractMedia } = require('../../src/modules/whatsapp/infrastructure/providers/twilio/twilio.adapter');
 
 describe('Twilio Adapter', () => {
 
