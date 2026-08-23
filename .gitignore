@@ -1,7 +1,50 @@
-node_modules
-# Keep environment variables out of version control
-.env
-docker-compose.yml
-/src/generated/prisma
+# Environment variables and secrets
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
 
-docker-compose.yml
+# Vector databases, storage & runtime data
+**/data/
+**/data/**
+*.sqlite
+*.sqlite3
+*.db
+*.log
+.lock
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+**/.venv/
+**/venv/
+**/env/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node.js
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Prisma generated clients
+**/src/generated/prisma/
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+**/.idea/
+**/.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
