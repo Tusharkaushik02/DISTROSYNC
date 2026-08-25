@@ -5,7 +5,7 @@ import pypdf
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from app.api.routes.health import router as health_router
-from app.api.schemas.request import SearchRequest
+from app.api.schemas.request import IngestRequest, SearchRequest
 from app.api.schemas.response import SearchResponse, UploadResponse
 from app.core.config import settings
 from app.intelligence.embeddings.embedding_service import EmbeddingService
@@ -115,3 +115,54 @@ async def search(request: SearchRequest):
         query=request.query,
         results=results,
     )
+
+
+# ── Direct Text Ingestion (from ERP Service) ───────────────────────────
+
+
+@app.post("/api/v1/rag/ingest", response_model=UploadResponse)
+async def ingest_document(request: IngestRequest):
+    """Accept pre-extracted plain text and metadata from ERP, chunk, embed, and store in Qdrant."""
+    clean_text = " ".join(request.text.split())
+    if not clean_text.strip():
+        raise HTTPException(
+            status_code=400, detail="No extractable text provided."
+        )
+
+    chunks: list[dict] = []
+    chunk_index = 0
+    step = max(settings.CHUNK_SIZE - settings.CHUNK_OVERLAP, 1)
+
+    start = 0
+    while start < len(clean_text):
+        chunk_text = clean_text[start : start + settings.CHUNK_SIZE]
+        if chunk_text.strip():
+            chunks.append(
+                {
+                    "text": chunk_text,
+                    "metadata": {
+                        "document_id": request.documentId,
+                        "tenant_id": request.tenantId,
+                        "filename": request.fileName,
+                        "chunk_index": chunk_index,
+                        **request.metadata,
+                    },
+                }
+            )
+            chunk_index += 1
+        start += step
+
+    if not chunks:
+        raise HTTPException(status_code=400, detail="No text chunks generated.")
+
+    texts = [c["text"] for c in chunks]
+    embeddings = embedding_service.embed(texts)
+    vector_store.add(chunks, embeddings)
+
+    return UploadResponse(
+        success=True,
+        filename=request.fileName,
+        document_id=request.documentId,
+        chunks=len(chunks),
+    )
+
