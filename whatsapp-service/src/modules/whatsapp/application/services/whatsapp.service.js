@@ -4,8 +4,8 @@ const twilioProvider = require("../../infrastructure/providers/twilio/twilio.pro
 const provider = twilioProvider;
 
 // Send WhatsApp message via provider
-const sendMessage = async (to, body, options = {}) => {
-    return provider.sendMessage(to, body, options);
+const sendMessage = async (to, body) => {
+    return provider.sendMessage(to, body);
 };
 
 // Parse incoming webhook payload
