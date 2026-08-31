@@ -1,5 +1,7 @@
-// Text message handler — extract text + stub pipeline stages
+// Text message handler - send text to AI service and reply via Twilio
 const { createHandlerResult } = require('./handler.result');
+const { generateAIResponse } = require('../services/ai.service');
+const { sendMessage } = require('../services/whatsapp.service');
 
 // Extract text content from canonical event
 function extractText(canonicalEvent) {
@@ -23,28 +25,8 @@ function buildTextContext(canonicalEvent, extracted) {
     };
 }
 
-// Stub: intent detection — future AI/NLP integration point
-function detectIntent(_context) {
-    return { implemented: false, reason: 'AI intent detection not integrated' };
-}
-
-// Stub: entity extraction — future NLP integration point
-function extractEntities(_context) {
-    return { implemented: false, reason: 'Entity extraction not integrated' };
-}
-
-// Stub: action determination — future business logic integration point
-function determineAction(_intent, _entities) {
-    return { implemented: false, reason: 'Action determination not integrated' };
-}
-
-// Stub: response generation — future LLM/template integration point
-function generateResponse(_action) {
-    return { implemented: false, reason: 'Response generation not integrated' };
-}
-
 // Main text handler
-function textHandler(canonicalEvent, event) {
+async function textHandler(canonicalEvent, event) {
     const extracted = extractText(canonicalEvent);
 
     if (!extracted.text) {
@@ -57,29 +39,49 @@ function textHandler(canonicalEvent, event) {
     }
 
     const context = buildTextContext(canonicalEvent, extracted);
-    const intent = detectIntent(context);
-    const entities = extractEntities(context);
-    const action = determineAction(intent, entities);
-    const response = generateResponse(action);
 
-    return createHandlerResult({
-        handled: true,
-        event,
-        status: 'processed',
-        data: {
-            extracted,
-            context,
-            pipeline: { intent, entities, action, response },
-        },
-    });
+    try {
+        console.log('[Webhook] Incoming WhatsApp message');
+        console.log('[AI] Sending message to AI service');
+        const aiResponse = await generateAIResponse(context.text);
+
+        console.log('[WhatsApp] Sending AI response');
+        const outbound = await sendMessage(context.sender, aiResponse);
+
+        return createHandlerResult({
+            handled: true,
+            event,
+            action: 'ai_response_sent',
+            status: 'processed',
+            data: {
+                extracted,
+                context,
+                aiResponse,
+                outbound,
+            },
+        });
+    } catch (error) {
+        console.error(`[AI] Text handling failed: ${error.message}`);
+
+        return createHandlerResult({
+            handled: false,
+            event,
+            action: 'ai_response_failed',
+            status: 'failed',
+            data: {
+                extracted,
+                context,
+            },
+            error: {
+                code: 'AI_RESPONSE_FAILED',
+                message: 'Failed to generate or send AI response',
+            },
+        });
+    }
 }
 
 module.exports = {
     textHandler,
     extractText,
     buildTextContext,
-    detectIntent,
-    extractEntities,
-    determineAction,
-    generateResponse,
 };

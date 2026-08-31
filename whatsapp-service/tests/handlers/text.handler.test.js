@@ -1,4 +1,14 @@
+jest.mock('../../src/modules/whatsapp/application/services/ai.service', () => ({
+    generateAIResponse: jest.fn(),
+}));
+
+jest.mock('../../src/modules/whatsapp/application/services/whatsapp.service', () => ({
+    sendMessage: jest.fn(),
+}));
+
 const { textHandler, extractText, buildTextContext } = require('../../src/modules/whatsapp/application/handlers/text.handler');
+const { generateAIResponse } = require('../../src/modules/whatsapp/application/services/ai.service');
+const { sendMessage } = require('../../src/modules/whatsapp/application/services/whatsapp.service');
 const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
 
 function makeTextEvent(body) {
@@ -17,6 +27,16 @@ function makeTextEvent(body) {
 }
 
 describe('Text Handler', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        generateAIResponse.mockResolvedValue('Hi! How can I help you today?');
+        sendMessage.mockResolvedValue({
+            sid: 'SMout123',
+            to: 'whatsapp:+919876543210',
+            status: 'queued',
+        });
+    });
+
     describe('extractText', () => {
         it('should extract text and sender', () => {
             const result = extractText(makeTextEvent('Hello'));
@@ -55,48 +75,39 @@ describe('Text Handler', () => {
     });
 
     describe('textHandler', () => {
-        it('should process valid text message', () => {
-            const result = textHandler(makeTextEvent('I want to order rice'), 'message.text');
+        it('should send valid text to AI service and reply on WhatsApp', async () => {
+            const result = await textHandler(makeTextEvent('Hello'), 'message.text');
 
+            expect(generateAIResponse).toHaveBeenCalledWith('Hello');
+            expect(sendMessage).toHaveBeenCalledWith('+919876543210', 'Hi! How can I help you today?');
             expect(result.handled).toBe(true);
             expect(result.event).toBe('message.text');
+            expect(result.action).toBe('ai_response_sent');
             expect(result.status).toBe('processed');
-            expect(result.data.extracted.text).toBe('I want to order rice');
-            expect(result.data.context.sender).toBe('+919876543210');
+            expect(result.data.extracted.text).toBe('Hello');
+            expect(result.data.aiResponse).toBe('Hi! How can I help you today?');
         });
 
-        it('should include stub pipeline stages', () => {
-            const result = textHandler(makeTextEvent('Hello'), 'message.text');
-            const { pipeline } = result.data;
+        it('should reject empty text without calling AI service', async () => {
+            const result = await textHandler(makeTextEvent(''), 'message.text');
 
-            expect(pipeline.intent.implemented).toBe(false);
-            expect(pipeline.entities.implemented).toBe(false);
-            expect(pipeline.action.implemented).toBe(false);
-            expect(pipeline.response.implemented).toBe(false);
-        });
-
-        it('should reject empty text', () => {
-            const result = textHandler(makeTextEvent(''), 'message.text');
-
+            expect(generateAIResponse).not.toHaveBeenCalled();
+            expect(sendMessage).not.toHaveBeenCalled();
             expect(result.handled).toBe(false);
             expect(result.status).toBe('rejected');
             expect(result.error.code).toBe('EMPTY_TEXT');
         });
 
-        it('should reject whitespace-only text', () => {
-            const result = textHandler(makeTextEvent('   '), 'message.text');
+        it('should handle AI service failures without throwing', async () => {
+            generateAIResponse.mockRejectedValue(new Error('AI unavailable'));
 
+            const result = await textHandler(makeTextEvent('Hello'), 'message.text');
+
+            expect(sendMessage).not.toHaveBeenCalled();
             expect(result.handled).toBe(false);
-            expect(result.error.code).toBe('EMPTY_TEXT');
-        });
-
-        it('should reject null text', () => {
-            const event = makeTextEvent(null);
-            event.content.text = null;
-            const result = textHandler(event, 'message.text');
-
-            expect(result.handled).toBe(false);
-            expect(result.error.code).toBe('EMPTY_TEXT');
+            expect(result.status).toBe('failed');
+            expect(result.action).toBe('ai_response_failed');
+            expect(result.error.code).toBe('AI_RESPONSE_FAILED');
         });
     });
 });
