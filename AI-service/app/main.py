@@ -19,6 +19,27 @@ embedding_service = EmbeddingService()
 vector_store = VectorStore()
 
 
+# user message
+
+@app.post("/api/v1/conversation", response_model=dict)
+async def generate_conversation_response(request: dict):
+    """Generate a response to a user message using the LLM."""
+    message = request.get("message", "").strip()
+    if not message:
+        raise HTTPException(status_code=422, detail="Message cannot be empty.")
+
+    print("[AI] Received message")
+    try:
+        from app.orchestration.conversation_orchestrator import conversation_orchestrator
+
+        response = await conversation_orchestrator.generate_response(message)
+        return {"response": response}
+    except Exception as exc:
+        print(f"[AI] Unexpected conversation error: {exc.__class__.__name__}")
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "INTERNAL_SERVER_ERROR", "message": "An internal AI error occurred."},
+        ) from exc
 # ── PDF Upload & Ingestion ────────────────────────────────────────────
 
 
