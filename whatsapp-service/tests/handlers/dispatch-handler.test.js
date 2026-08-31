@@ -1,3 +1,11 @@
+jest.mock('../../src/modules/whatsapp/application/services/ai.service', () => ({
+    generateAIResponse: jest.fn().mockResolvedValue('AI reply'),
+}));
+
+jest.mock('../../src/modules/whatsapp/application/services/whatsapp.service', () => ({
+    sendMessage: jest.fn().mockResolvedValue({ sid: 'SMout123', status: 'queued' }),
+}));
+
 const { dispatch, handle, HANDLER_REGISTRY } = require('../../src/modules/whatsapp/application/events/event.dispatcher');
 const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
 
@@ -43,10 +51,10 @@ describe('Dispatch → Handle Integration', () => {
     });
 
     describe('Text message end-to-end', () => {
-        it('should dispatch and handle text message', () => {
+        it('should dispatch and handle text message', async () => {
             const event = makeEvent(EVENT_TYPES.MESSAGE, MESSAGE_TYPES.TEXT);
             const dispatchResult = dispatch(event);
-            const handlerResult = handle(dispatchResult);
+            const handlerResult = await handle(dispatchResult);
 
             expect(handlerResult.handled).toBe(true);
             expect(handlerResult.event).toBe('message.text');
@@ -56,11 +64,11 @@ describe('Dispatch → Handle Integration', () => {
     });
 
     describe('Button event end-to-end', () => {
-        it('should dispatch and handle button press', () => {
+        it('should dispatch and handle button press', async () => {
             const event = makeEvent(EVENT_TYPES.INTERACTIVE, 'button');
             event.metadata.raw = { ButtonText: 'Track Order' };
             const dispatchResult = dispatch(event);
-            const handlerResult = handle(dispatchResult);
+            const handlerResult = await handle(dispatchResult);
 
             expect(handlerResult.handled).toBe(true);
             expect(handlerResult.action).toBe('track_order');
@@ -69,11 +77,11 @@ describe('Dispatch → Handle Integration', () => {
     });
 
     describe('Media event end-to-end', () => {
-        it('should dispatch and reject image', () => {
+        it('should dispatch and reject image', async () => {
             const event = makeEvent(EVENT_TYPES.MESSAGE, MESSAGE_TYPES.IMAGE);
             event.content.media = [{ url: 'https://example.com/img.jpg', contentType: 'image/jpeg', index: 0 }];
             const dispatchResult = dispatch(event);
-            const handlerResult = handle(dispatchResult);
+            const handlerResult = await handle(dispatchResult);
 
             expect(handlerResult.handled).toBe(false);
             expect(handlerResult.event).toBe('message.image');
@@ -82,19 +90,19 @@ describe('Dispatch → Handle Integration', () => {
     });
 
     describe('Unsupported event end-to-end', () => {
-        it('should dispatch and reject status callback', () => {
+        it('should dispatch and reject status callback', async () => {
             const event = makeEvent(EVENT_TYPES.STATUS, null);
             const dispatchResult = dispatch(event);
-            const handlerResult = handle(dispatchResult);
+            const handlerResult = await handle(dispatchResult);
 
             expect(handlerResult.handled).toBe(false);
             expect(handlerResult.error.code).toBe('UNSUPPORTED_EVENT');
         });
 
-        it('should dispatch and reject unknown event', () => {
+        it('should dispatch and reject unknown event', async () => {
             const event = makeEvent(EVENT_TYPES.UNKNOWN, null);
             const dispatchResult = dispatch(event);
-            const handlerResult = handle(dispatchResult);
+            const handlerResult = await handle(dispatchResult);
 
             expect(handlerResult.handled).toBe(false);
             expect(handlerResult.error.code).toBe('UNSUPPORTED_EVENT');
@@ -102,10 +110,10 @@ describe('Dispatch → Handle Integration', () => {
     });
 
     describe('Unregistered event fallback', () => {
-        it('should fall back to unsupported handler for unregistered events', () => {
+        it('should fall back to unsupported handler for unregistered events', async () => {
             const event = makeEvent('alien', 'probe');
             const dispatchResult = dispatch(event);
-            const handlerResult = handle(dispatchResult);
+            const handlerResult = await handle(dispatchResult);
 
             expect(handlerResult.handled).toBe(false);
             expect(handlerResult.error.code).toBe('UNSUPPORTED_EVENT');

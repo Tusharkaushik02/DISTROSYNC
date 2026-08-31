@@ -33,7 +33,7 @@ function dispatch(canonicalEvent) {
 }
 
 // Route a dispatch result to the registered handler
-function handle(dispatchResult) {
+async function handle(dispatchResult) {
     const handler = HANDLER_REGISTRY[dispatchResult.event] || unsupportedHandler;
     return handler(dispatchResult.canonicalEvent, dispatchResult.event);
 }
