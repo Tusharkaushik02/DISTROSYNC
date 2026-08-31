@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from groq import Groq
 
 from app.core.config import settings
@@ -61,3 +62,6 @@ class LLMClient:
 
 
 llm_client = LLMClient()
+=======
+# Stub — not yet implemented.
+>>>>>>> 421d44fc525a1b34990050ddd9b86968a821016f
