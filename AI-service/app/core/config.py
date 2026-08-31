@@ -2,6 +2,12 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    GROQ_API_KEY: str | None = None
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    GROQ_TIMEOUT_SECONDS: float = 30
+    GROQ_TEMPERATURE: float = 0.2
+    GROQ_MAX_TOKENS: int = 512
+
     QDRANT_PATH: str = "./data/qdrant"
     QDRANT_URL: str | None = None
     QDRANT_API_KEY: str | None = None
