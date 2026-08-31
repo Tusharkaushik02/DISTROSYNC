@@ -2,7 +2,7 @@
  * Tests for the webhook payload validator.
  */
 
-const { validate } = require('../../src/whatsapp/validation/webhook.validator');
+const { validate } = require('../../src/modules/whatsapp/validation/webhook.validator');
 
 // ── Test Payloads ─────────────────────────────────────────────────────
 

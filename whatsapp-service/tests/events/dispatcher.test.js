@@ -2,8 +2,8 @@
  * Tests for the event dispatcher.
  */
 
-const { dispatch } = require('../../src/whatsapp/events/event.dispatcher');
-const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/whatsapp/events/event.types');
+const { dispatch } = require('../../src/modules/whatsapp/application/events/event.dispatcher');
+const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
 
 function makeEvent(eventType, messageType) {
     return {
