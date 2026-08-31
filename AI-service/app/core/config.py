@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     SPARSE_WEIGHT: float = 0.3
     TOP_K: int = 5
 
+    # SERVICE_API_KEY: str | None = "65c47afdd3eff0ebc554035a37dcf700e12c8fd7b634962ebf24126a5c5f08b5"
+
     class Config:
         env_file = ".env"
         case_sensitive = True
