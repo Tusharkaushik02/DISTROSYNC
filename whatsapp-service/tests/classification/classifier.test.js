@@ -2,9 +2,9 @@
  * Tests for event type and message type classifiers.
  */
 
-const { classifyEventType } = require('../../src/whatsapp/classification/event.classifier');
-const { classifyMessageType } = require('../../src/whatsapp/classification/message.classifier');
-const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/whatsapp/events/event.types');
+const { classifyEventType } = require('../../src/modules/whatsapp/domain/classification/event.classifier');
+const { classifyMessageType } = require('../../src/modules/whatsapp/domain/classification/message.classifier');
+const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
 
 // ── Helper: minimal canonical event ───────────────────────────────────
 
