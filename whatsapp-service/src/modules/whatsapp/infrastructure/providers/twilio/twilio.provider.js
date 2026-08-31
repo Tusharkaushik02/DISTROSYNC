@@ -35,14 +35,16 @@ const getClient = () => {
     return client;
 };
 
-// Send WhatsApp message via Twilio
-const sendMessage = async (to, body, options = {}) => {
+// Send WhatsApp text message via Twilio
+const sendMessage = async (to, body) => {
     if (!to) {
         throw new Error("Recipient 'to' is required");
     }
 
-    if (!body && !options.contentSid) {
-        throw new Error("Either message 'body' or 'contentSid' is required");
+    const text = typeof body === 'string' ? body.trim() : '';
+
+    if (!text) {
+        throw new Error("Message 'body' is required");
     }
 
     // Format phone number with whatsapp: prefix
@@ -64,18 +66,8 @@ const sendMessage = async (to, body, options = {}) => {
         const payload = {
             from: formattedFrom,
             to: formattedTo,
+            body: text,
         };
-
-        if (options.contentSid) {
-            payload.contentSid = options.contentSid;
-            if (options.contentVariables) {
-                payload.contentVariables = typeof options.contentVariables === 'string'
-                    ? options.contentVariables
-                    : JSON.stringify(options.contentVariables);
-            }
-        } else {
-            payload.body = body;
-        }
 
         const message = await twilioClient.messages.create(payload);
 
