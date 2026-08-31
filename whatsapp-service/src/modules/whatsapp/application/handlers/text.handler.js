@@ -45,7 +45,6 @@ async function textHandler(canonicalEvent, event) {
         console.log('[AI] Sending message to AI service');
         const aiResponse = await generateAIResponse(context.text);
 
-        console.log('[WhatsApp] Sending AI response');
         const outbound = await sendMessage(context.sender, aiResponse);
 
         return createHandlerResult({

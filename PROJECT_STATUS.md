@@ -238,9 +238,9 @@ Implemented:
 - TwiML response generation exists via `MessagingResponse`.
 - Actual local `.env` exists under `whatsapp-service` with Twilio variable names.
 
-Not wired in current webhook flow:
+Current webhook flow:
 
-- No handler calls `whatsapp.service.sendMessage`.
+- The text handler calls `whatsapp.service.sendMessage` for AI-generated replies.
 - No handler returns TwiML XML to Twilio; the controller returns JSON.
 - No persistence of Twilio message SID, sender, recipient, or body.
 
@@ -259,9 +259,9 @@ Incoming webhook:
 
 Outgoing message API:
 
-- Function: `sendMessage(to, body, options = {})` in `twilio.provider.js`.
-- Supports plain `body`.
-- Supports Twilio Content API templates via `options.contentSid` and optional `contentVariables`.
+- Function: `sendMessage(to, body)` in `twilio.provider.js`.
+- The conversational reply path sends plain text using `body`.
+- Content API template fields are not used by the current WhatsApp chatbot flow.
 - Formats both sender and recipient with `whatsapp:` prefix.
 
 Environment variables used by Twilio code:

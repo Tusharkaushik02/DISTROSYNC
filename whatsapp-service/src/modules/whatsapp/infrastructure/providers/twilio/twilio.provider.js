@@ -35,8 +35,25 @@ const getClient = () => {
     return client;
 };
 
-// Send WhatsApp text message via Twilio
-const sendMessage = async (to, body) => {
+// Format a WhatsApp address without exposing message content or credentials.
+const formatWhatsAppAddress = (value, fieldName) => {
+    if (typeof value !== 'string' || !value.trim()) {
+        throw new Error(`${fieldName} is required`);
+    }
+
+    let clean = value.replace(/^whatsapp:/i, '').trim();
+    clean = clean.replace(/[\s\(\)\-]/g, '');
+
+    if (!clean.startsWith('+')) {
+        clean = `+${clean}`;
+    }
+
+    return `whatsapp:${clean}`;
+};
+
+// Build the standard text-message payload used by the conversational reply path.
+// Content API fields intentionally do not belong in this payload.
+const buildTextMessagePayload = (to, body) => {
     if (!to) {
         throw new Error("Recipient 'to' is required");
     }
@@ -47,31 +64,30 @@ const sendMessage = async (to, body) => {
         throw new Error("Message 'body' is required");
     }
 
-    // Format phone number with whatsapp: prefix
-    const formatNumber = (num) => {
-        let clean = num.replace(/^whatsapp:/i, '').trim();
-        clean = clean.replace(/[\s\(\)\-]/g, '');
-        if (!clean.startsWith('+')) {
-            clean = `+${clean}`;
-        }
-        return `whatsapp:${clean}`;
+    return {
+        from: formatWhatsAppAddress(
+            process.env.TWILIO_WHATSAPP_NUMBER,
+            'TWILIO_WHATSAPP_NUMBER'
+        ),
+        to: formatWhatsAppAddress(to, "Recipient 'to'"),
+        body: text,
     };
+};
 
-    const formattedTo = formatNumber(to);
-    const formattedFrom = formatNumber(process.env.TWILIO_WHATSAPP_NUMBER);
-
-    const twilioClient = getClient();
+// Send a normal WhatsApp text message via Twilio.
+const sendMessage = async (to, body) => {
+    const payload = buildTextMessagePayload(to, body);
 
     try {
-        const payload = {
-            from: formattedFrom,
-            to: formattedTo,
-            body: text,
-        };
-        console.log(payload)
+        const twilioClient = getClient();
+
+        console.log('[WhatsApp] Sending AI response');
+        console.log(`[WhatsApp] from: ${payload.from}`);
+        console.log(`[WhatsApp] to: ${payload.to}`);
+        console.log(`[WhatsApp] bodyLength: ${payload.body.length}`);
+
         const message = await twilioClient.messages.create(payload);
-        console.log(message)
-        console.log(`[Twilio] Message sent — SID: ${message.sid}, To: ${formattedTo}`);
+        console.log(`[Twilio] Message sent: ${message.sid}`);
 
         return {
             sid: message.sid,
@@ -82,15 +98,22 @@ const sendMessage = async (to, body) => {
             dateCreated: message.dateCreated,
         };
     } catch (error) {
-        console.error(`[Twilio] Send failed — Code: ${error.code}, Message: ${error.message}`);
+        const code = error && error.code ? error.code : 'UNKNOWN';
+        const message = error && error.message
+            ? error.message
+            : 'Twilio message send failed';
 
-        throw {
+        console.error(`[Twilio] Send failed — Code: ${code}, Message: ${message}`);
+
+        const providerError = new Error(message);
+        Object.assign(providerError, {
             provider: "twilio",
-            code: error.code,
-            message: error.message,
-            status: error.status,
-            moreInfo: error.moreInfo,
-        };
+            code,
+            status: error && error.status,
+            moreInfo: error && error.moreInfo,
+        });
+
+        throw providerError;
     }
 };
 
@@ -125,6 +148,7 @@ const createTwimlResponse = (text) => {
 module.exports = {
     initClient,
     getClient,
+    buildTextMessagePayload,
     sendMessage,
     parseIncomingMessage,
     createTwimlResponse,

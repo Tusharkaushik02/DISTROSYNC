@@ -1,11 +1,11 @@
 const createMock = jest.fn();
-const twilioFactory = jest.fn(() => ({
+const mockTwilioFactory = jest.fn(() => ({
     messages: {
         create: createMock,
     },
 }));
 
-twilioFactory.twiml = {
+mockTwilioFactory.twiml = {
     MessagingResponse: class {
         message() {}
         toString() {
@@ -14,7 +14,7 @@ twilioFactory.twiml = {
     },
 };
 
-jest.mock('twilio', () => twilioFactory);
+jest.mock('twilio', () => mockTwilioFactory);
 
 describe('Twilio provider sendMessage', () => {
     let sendMessage;

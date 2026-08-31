@@ -18,8 +18,6 @@ async function handleWebhook(req, res, next) {
                 validationResult.errors
             );
         }
-        // console.log(`[Webhook] Received event: ${validationResult.data.event} from ${validationResult.data.sender.phone || 'unknown'}`);
-        console.log(req.body)
         // ── Stage 2: Normalization ────────────────────────────────────
         const canonicalEvent = normalize(validationResult.data);
 
@@ -35,7 +33,7 @@ async function handleWebhook(req, res, next) {
         // ── Stage 6: Handle ───────────────────────────────────────────
         const handlerResult = await handle(result);
 
-        // console.log(`[Webhook] ${result.event} → ${handlerResult.status} from ${canonicalEvent.sender.phone || 'unknown'}`);
+        console.log(`[Webhook] ${result.event} → ${handlerResult.status} from ${canonicalEvent.sender.phone || 'unknown'}`);
 
         // Twilio expects 200 to acknowledge receipt
         return res.status(200).json({
