@@ -1,38 +1,58 @@
 import io
 import uuid
+from contextlib import asynccontextmanager
 
 import pypdf
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from app.api.routes.health import router as health_router
-from app.api.schemas.request import IngestRequest, SearchRequest
+from app.api.schemas.request import ConversationRequest, IngestRequest, SearchRequest
 from app.api.schemas.response import SearchResponse, UploadResponse
 from app.core.config import settings
-from app.intelligence.embeddings.embedding_service import EmbeddingService
-from app.rag.vector_store import VectorStore
+from app.memory.service import memory_service
 
-app = FastAPI(title="DistroSync AI Service", version="0.1.0")
+
+# ── Application Lifespan ──────────────────────────────────────────────
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown hook — initializes conversation memory DB."""
+    await memory_service.initialize()
+    print("[App] Conversation memory initialized")
+    yield
+    await memory_service.close()
+    print("[App] Conversation memory closed")
+
+
+app = FastAPI(title="DistroSync AI Service", version="0.1.0", lifespan=lifespan)
 
 app.include_router(health_router)
 
-embedding_service = EmbeddingService()
-vector_store = VectorStore()
+
+def get_embedding_service():
+    from app.intelligence.embeddings.embedding_service import EmbeddingService
+    return EmbeddingService()
+
+
+def get_vector_store():
+    from app.rag.vector_store import VectorStore
+    return VectorStore()
 
 
 # user message
 
 @app.post("/api/v1/conversation", response_model=dict)
-async def generate_conversation_response(request: dict):
+async def generate_conversation_response(request: ConversationRequest):
     """Generate a response to a user message using the LLM."""
-    message = request.get("message", "").strip()
-    if not message:
-        raise HTTPException(status_code=422, detail="Message cannot be empty.")
-
-    print("[AI] Received message")
+    print(f"[AI] Received message from user {request.user_id}")
     try:
         from app.orchestration.conversation_orchestrator import conversation_orchestrator
 
-        response = await conversation_orchestrator.generate_response(message)
+        response = await conversation_orchestrator.generate_response(
+            user_id=request.user_id,
+            message=request.message,
+        )
         return {"response": response}
     except Exception as exc:
         print(f"[AI] Unexpected conversation error: {exc.__class__.__name__}")
@@ -103,6 +123,9 @@ async def upload_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="No text chunks generated.")
 
     # ── Embedding ─────────────────────────────────────────────────────
+    embedding_service = get_embedding_service()
+    vector_store = get_vector_store()
+
     texts = [c["text"] for c in chunks]
     embeddings = embedding_service.embed(texts)
 
@@ -123,6 +146,9 @@ async def upload_pdf(file: UploadFile = File(...)):
 @app.post("/api/v1/rag/search", response_model=SearchResponse)
 async def search(request: SearchRequest):
     """Run hybrid dense + BM25 retrieval and return ranked results."""
+    embedding_service = get_embedding_service()
+    vector_store = get_vector_store()
+
     query_embedding = embedding_service.embed([request.query])[0]
 
     results = vector_store.hybrid_search(
@@ -176,6 +202,9 @@ async def ingest_document(request: IngestRequest):
     if not chunks:
         raise HTTPException(status_code=400, detail="No text chunks generated.")
 
+    embedding_service = get_embedding_service()
+    vector_store = get_vector_store()
+
     texts = [c["text"] for c in chunks]
     embeddings = embedding_service.embed(texts)
     vector_store.add(chunks, embeddings)
@@ -186,4 +215,3 @@ async def ingest_document(request: IngestRequest):
         document_id=request.documentId,
         chunks=len(chunks),
     )
-

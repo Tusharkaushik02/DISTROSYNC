@@ -13,10 +13,14 @@ function getConversationUrl() {
     return `${baseUrl.replace(/\/+$/, '')}/api/v1/conversation`;
 }
 
-async function generateAIResponse(message) {
+async function generateAIResponse(message, userId) {
     const cleanMessage = (message || '').trim();
     if (!cleanMessage) {
         throw new AIServiceError('Message cannot be empty', 400);
+    }
+
+    if (!userId || typeof userId !== 'string' || !userId.trim()) {
+        throw new AIServiceError('User ID (WaId) is required', 400);
     }
 
     const controller = new AbortController();
@@ -29,7 +33,7 @@ async function generateAIResponse(message) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message: cleanMessage }),
+            body: JSON.stringify({ user_id: userId.trim(), message: cleanMessage }),
             signal: controller.signal,
         });
 

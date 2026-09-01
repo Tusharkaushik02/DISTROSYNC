@@ -19,6 +19,7 @@ function buildTextContext(canonicalEvent, extracted) {
         text: extracted.text,
         sender: canonicalEvent.sender.phone,
         senderName: canonicalEvent.sender.name,
+        waId: canonicalEvent.sender.waId,
         timestamp: canonicalEvent.timestamp,
         channel: canonicalEvent.channel,
         messageId: canonicalEvent.id,
@@ -43,7 +44,7 @@ async function textHandler(canonicalEvent, event) {
     try {
         console.log('[Webhook] Incoming WhatsApp message');
         console.log('[AI] Sending message to AI service');
-        const aiResponse = await generateAIResponse(context.text);
+        const aiResponse = await generateAIResponse(context.text, context.waId);
 
         console.log('[WhatsApp] Sending AI response');
         const outbound = await sendMessage(context.sender, aiResponse);

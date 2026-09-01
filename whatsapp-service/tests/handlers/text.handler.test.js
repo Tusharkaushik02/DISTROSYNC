@@ -78,7 +78,7 @@ describe('Text Handler', () => {
         it('should send valid text to AI service and reply on WhatsApp', async () => {
             const result = await textHandler(makeTextEvent('Hello'), 'message.text');
 
-            expect(generateAIResponse).toHaveBeenCalledWith('Hello');
+            expect(generateAIResponse).toHaveBeenCalledWith('Hello', '919876543210');
             expect(sendMessage).toHaveBeenCalledWith('+919876543210', 'Hi! How can I help you today?');
             expect(result.handled).toBe(true);
             expect(result.event).toBe('message.text');
