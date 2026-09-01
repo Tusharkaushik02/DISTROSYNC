@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     GROQ_TEMPERATURE: float = 0.2
     GROQ_MAX_TOKENS: int = 512
 
-    DATABASE_URL: str = "postgresql://postgres:1234@localhost:5432/postgres"
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5434/distrosync_ai"
     CONVERSATION_HISTORY_LIMIT: int = 20
 
     QDRANT_PATH: str = "./data/qdrant"
