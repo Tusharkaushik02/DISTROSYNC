@@ -1,0 +1,18 @@
+{
+  "name": "ai-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prisma schema and migrations for the DistroSync AI service PostgreSQL database",
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:status": "prisma migrate status",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "dotenv": "^17.4.2",
+    "prisma": "^6.19.3"
+  }
+}

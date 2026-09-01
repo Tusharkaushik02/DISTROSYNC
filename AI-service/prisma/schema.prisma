@@ -1,0 +1,42 @@
+// Prisma schema for the AI service conversation context database.
+// The Python service uses asyncpg at runtime; Prisma owns the schema and
+// migration history so database changes are explicit and deployable.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+model Conversation {
+  id        String                @id @default(uuid()) @db.Uuid
+  userId    String                @unique(map: "conversations_user_id_key") @map("user_id")
+  createdAt DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime              @default(now()) @map("updated_at") @db.Timestamptz(3)
+  messages  ConversationMessage[]
+
+  @@index([updatedAt], map: "conversations_updated_at_idx")
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             BigInt       @id @default(autoincrement()) @db.BigInt
+  conversationId String       @map("conversation_id") @db.Uuid
+  role           MessageRole
+  content        String
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt, id], map: "conversation_messages_context_idx")
+  @@map("conversation_messages")
+}

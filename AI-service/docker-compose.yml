@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: distrosync-ai-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: distrosync_ai
+
+    ports:
+      - "5434:5432"
+
+    volumes:
+      - ai_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d distrosync_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ai_postgres_data:
