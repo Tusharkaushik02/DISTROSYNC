@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     GROQ_TEMPERATURE: float = 0.2
     GROQ_MAX_TOKENS: int = 512
 
+    DATABASE_URL: str = "postgresql://postgres:1234@localhost:5432/postgres"
+    CONVERSATION_HISTORY_LIMIT: int = 20
+
     QDRANT_PATH: str = "./data/qdrant"
     QDRANT_URL: str | None = None
     QDRANT_API_KEY: str | None = None
