@@ -68,8 +68,11 @@ const sendMessage = async (to, body) => {
             to: formattedTo,
             body: text,
         };
-
-        const message = await twilioClient.messages.create(payload);
+        console.log(
+    "[Twilio] FINAL PAYLOAD:",
+    JSON.stringify(payload, null, 2)
+);
+        const message = await twilioClient.messages.create(payload);    
 
         console.log(`[Twilio] Message sent — SID: ${message.sid}, To: ${formattedTo}`);
 
