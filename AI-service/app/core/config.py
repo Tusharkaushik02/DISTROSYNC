@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     GROQ_API_KEY: str | None = None
     GROQ_MODEL: str = "openai/gpt-oss-120b"
-    GROQ_TIMEOUT_SECONDS: float = 30
+    GROQ_TIMEOUT_SECONDS: float = 30.0
     GROQ_TEMPERATURE: float = 0.2
     GROQ_MAX_TOKENS: int = 512
 
@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     SPARSE_WEIGHT: float = 0.3
     TOP_K: int = 5
 
-    # SERVICE_API_KEY: str | None = "65c47afdd3eff0ebc554035a37dcf700e12c8fd7b634962ebf24126a5c5f08b5"
+    # ERP Service Settings
+    ERP_SERVICE_URL: str = "http://localhost:4002"
+    ERP_SERVICE_API_KEY: str = "65c47afdd3eff0ebc554035a37dcf700e12c8fd7b634962ebf24126a5c5f08b5"
+    ERP_TIMEOUT_SECONDS: float = 15.0
 
     class Config:
         env_file = ".env"

@@ -17,12 +17,14 @@ class CustomerService {
         if (!customer) {
             throw new AppError('CUSTOMER_NOT_FOUND', `Customer with phone ${cleanPhone} not found`);
         }
+        console.log(`[ERP Customer] 👤 Found customer "${customer.name}" (ID: ${customer.id}) for phone: ${cleanPhone}`);
         return customer;
     }
 
     async createCustomer(data, tenantId) {
         const cleanPhone = data.phone.trim();
         const cleanName = data.name.trim();
+        console.log(`[ERP Customer] ➕ Creating customer "${cleanName}" (${cleanPhone}) | Tenant: ${tenantId}`);
 
         // Check if customer with this phone exists in tenant
         const existing = await customerRepository.findByPhone(cleanPhone, tenantId);

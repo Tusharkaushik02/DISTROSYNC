@@ -19,12 +19,14 @@ class ProductService {
         }
 
         const products = await productRepository.search(cleanQuery, tenantId, { limit, onlyActive: true });
+        console.log(`[ERP Product] 🔍 Search query="${cleanQuery}" | Found ${products.length} matching product(s)`);
         return products.map(p => this.formatProduct(p));
     }
 
     async createProduct(data, tenantId) {
         const cleanSku = data.sku.trim();
         const cleanName = data.name.trim();
+        console.log(`[ERP Product] ➕ Creating product SKU="${cleanSku}", Name="${cleanName}", Unit="${data.unit || 'unit'}", Price=₹${data.price}, Stock=${data.initialStock || 0}`);
 
         // Check if SKU exists in tenant
         const existing = await productRepository.findBySku(cleanSku, tenantId);

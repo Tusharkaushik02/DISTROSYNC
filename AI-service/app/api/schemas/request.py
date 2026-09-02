@@ -5,6 +5,10 @@ from pydantic import BaseModel, Field
 class ConversationRequest(BaseModel):
     user_id: str = Field(..., min_length=1, description="WhatsApp user identifier (WaId)")
     message: str = Field(..., min_length=1, description="User message text")
+    tenant_id: str = Field(
+        default="00000000-0000-0000-0000-000000000000",
+        description="Tenant identifier UUID for multi-tenant context",
+    )
 
 
 class SearchRequest(BaseModel):

@@ -52,6 +52,7 @@ async def generate_conversation_response(request: ConversationRequest):
         response = await conversation_orchestrator.generate_response(
             user_id=request.user_id,
             message=request.message,
+            tenant_id=request.tenant_id,
         )
         return {"response": response}
     except Exception as exc:

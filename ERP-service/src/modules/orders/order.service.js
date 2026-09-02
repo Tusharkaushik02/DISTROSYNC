@@ -134,6 +134,7 @@ class OrderService {
                 await inventoryService.reserve(item.productId, tenantId, item.quantity, tx);
             }
 
+            console.log(`[ERP Order] ✅ Order created ID: ${newOrder.id} | Customer: ${customer.name} | Total: ₹${totalOrderAmount} | Status: CONFIRMED`);
             return newOrder;
         });
 
@@ -147,6 +148,7 @@ class OrderService {
         }
 
         const updated = await orderRepository.updateStatus(id, tenantId, status);
+        console.log(`[ERP Order] 🔄 Status updated for Order ${id}: ${existing.status} -> ${status}`);
         return {
             orderId: updated.id,
             status: updated.status,

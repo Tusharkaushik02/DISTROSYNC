@@ -8,6 +8,7 @@ const { errorHandler } = require('./shared/middleware/errorHandler.middleware');
 // Module routes
 const customerRoutes = require('./modules/customers/customer.routes');
 const productRoutes = require('./modules/products/product.routes');
+const inventoryRoutes = require('./modules/inventory/inventory.routes');
 const orderRoutes = require('./modules/orders/order.routes');
 const documentRoutes = require('./modules/documents/document.routes');
 
@@ -19,6 +20,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(helmet());
+
+// Request logger
+app.use((req, res, next) => {
+    const tenant = req.headers['x-tenant-id'] || req.headers['tenant-id'] || 'No-Tenant';
+    console.log(`[ERP Request] ${req.method} ${req.originalUrl} | Tenant: ${tenant}`);
+    next();
+});
 
 // ─── Health Check ──────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -35,6 +43,7 @@ app.get('/health', (req, res) => {
 // ─── API Routes ────────────────────────────────────────────────────
 app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/documents', documentRoutes);
 

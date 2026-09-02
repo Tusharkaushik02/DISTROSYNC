@@ -7,6 +7,7 @@ class InventoryService {
         if (!inventory) {
             throw new AppError('PRODUCT_NOT_FOUND', `Inventory record for product ${productId} not found`);
         }
+        console.log(`[ERP Inventory] 📦 Product ${productId} -> Available: ${inventory.availableQuantity}, Reserved: ${inventory.reservedQuantity}`);
         return inventory;
     }
 
