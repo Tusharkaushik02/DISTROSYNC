@@ -27,6 +27,7 @@ async def search_products(
             "unit": p.get("unit"),
             "price": p.get("price"),
             "active": p.get("active"),
+            "availability_status": "available" if p.get("active", False) else "out_of_stock",
             "available_quantity": p.get("availableQuantity", 0),
         })
 
@@ -56,6 +57,7 @@ async def get_product(
             "unit": product.get("unit"),
             "price": product.get("price"),
             "active": product.get("active"),
+            "availability_status": "available" if product.get("active", False) else "out_of_stock",
             "available_quantity": product.get("availableQuantity", 0),
             "reserved_quantity": product.get("reservedQuantity", 0),
         },

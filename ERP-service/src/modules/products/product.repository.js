@@ -26,29 +26,30 @@ class ProductRepository {
     }
 
     async search(query, tenantId, { limit = 10, onlyActive = true } = {}, tx = prisma) {
+        const stopWords = new Set([
+            'a', 'about', 'an', 'and', 'can', 'could', 'details', 'do', 'find', 'for', 'get',
+            'have', 'i', 'information', 'is', 'me', 'of', 'please', 'product', 'products',
+            'search', 'show', 'stock', 'tell', 'the', 'there', 'this', 'want', 'what', 'you'
+        ]);
+        const normalizedQuery = (query || '').trim().toLowerCase();
+        const searchTokens = normalizedQuery
+            .split(/[^a-z0-9]+/)
+            .filter(token => token.length > 1 && !stopWords.has(token));
+
+        if (!searchTokens.length) {
+            return [];
+        }
+
         const whereClause = {
             tenantId,
             ...(onlyActive ? { active: true } : {}),
-            OR: [
-                {
-                    name: {
-                        contains: query,
-                        mode: 'insensitive'
-                    }
-                },
-                {
-                    sku: {
-                        contains: query,
-                        mode: 'insensitive'
-                    }
-                },
-                {
-                    description: {
-                        contains: query,
-                        mode: 'insensitive'
-                    }
-                }
-            ]
+            AND: searchTokens.map(token => ({
+                OR: [
+                    { name: { contains: token, mode: 'insensitive' } },
+                    { sku: { contains: token, mode: 'insensitive' } },
+                    { description: { contains: token, mode: 'insensitive' } }
+                ]
+            }))
         };
 
         return tx.product.findMany({

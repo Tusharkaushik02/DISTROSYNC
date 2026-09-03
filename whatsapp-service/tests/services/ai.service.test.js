@@ -10,6 +10,7 @@ describe('AI service client', () => {
         global.fetch = jest.fn();
         delete process.env.AI_SERVICE_URL;
         delete process.env.AI_SERVICE_TIMEOUT_MS;
+        delete process.env.WHATSAPP_TENANT_ID;
     });
 
     afterEach(() => {
@@ -27,7 +28,7 @@ describe('AI service client', () => {
             json: async () => ({ response: 'Hello from AI' }),
         });
 
-        const result = await generateAIResponse('Hello', '919876543210');
+        const result = await generateAIResponse('Hello', '919876543210', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
 
         expect(result).toBe('Hello from AI');
         expect(global.fetch).toHaveBeenCalledWith(
@@ -35,7 +36,11 @@ describe('AI service client', () => {
             expect.objectContaining({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: '919876543210', message: 'Hello' }),
+                body: JSON.stringify({
+                    user_id: '919876543210',
+                    message: 'Hello',
+                    tenant_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+                }),
             })
         );
     });
@@ -53,7 +58,7 @@ describe('AI service client', () => {
     it('should handle non-2xx AI responses', async () => {
         global.fetch.mockResolvedValue({ ok: false, status: 503 });
 
-        await expect(generateAIResponse('Hello', '919876543210')).rejects.toMatchObject({
+        await expect(generateAIResponse('Hello', '919876543210', 'tenant-1')).rejects.toMatchObject({
             name: 'AIServiceError',
             statusCode: 503,
         });

@@ -86,7 +86,7 @@ describe('Product Service Unit Tests', () => {
 
             const results = await productService.searchProducts('tata salt', mockTenantA, { limit: 5 });
 
-            expect(productRepository.search).toHaveBeenCalledWith('tata salt', mockTenantA, { limit: 5, onlyActive: true });
+            expect(productRepository.search).toHaveBeenCalledWith('tata salt', mockTenantA, { limit: 5, onlyActive: false });
             expect(results).toHaveLength(1);
             expect(results[0].name).toBe('Tata Salt 1kg');
             expect(results[0].availableQuantity).toBe(100);

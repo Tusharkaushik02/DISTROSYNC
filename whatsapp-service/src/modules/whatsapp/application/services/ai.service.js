@@ -13,7 +13,7 @@ function getConversationUrl() {
     return `${baseUrl.replace(/\/+$/, '')}/api/v1/conversation`;
 }
 
-async function generateAIResponse(message, userId) {
+async function generateAIResponse(message, userId, tenantId = process.env.WHATSAPP_TENANT_ID) {
     const cleanMessage = (message || '').trim();
     if (!cleanMessage) {
         throw new AIServiceError('Message cannot be empty', 400);
@@ -21,6 +21,10 @@ async function generateAIResponse(message, userId) {
 
     if (!userId || typeof userId !== 'string' || !userId.trim()) {
         throw new AIServiceError('User ID (WaId) is required', 400);
+    }
+
+    if (!tenantId || typeof tenantId !== 'string' || !tenantId.trim()) {
+        throw new AIServiceError('WhatsApp tenant ID is not configured', 500);
     }
 
     const controller = new AbortController();
@@ -33,7 +37,11 @@ async function generateAIResponse(message, userId) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ user_id: userId.trim(), message: cleanMessage }),
+            body: JSON.stringify({
+                user_id: userId.trim(),
+                message: cleanMessage,
+                tenant_id: tenantId.trim(),
+            }),
             signal: controller.signal,
         });
 

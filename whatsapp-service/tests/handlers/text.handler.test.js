@@ -29,12 +29,17 @@ function makeTextEvent(body) {
 describe('Text Handler', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        process.env.WHATSAPP_TENANT_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
         generateAIResponse.mockResolvedValue('Hi! How can I help you today?');
         sendMessage.mockResolvedValue({
             sid: 'SMout123',
             to: 'whatsapp:+919876543210',
             status: 'queued',
         });
+    });
+
+    afterEach(() => {
+        delete process.env.WHATSAPP_TENANT_ID;
     });
 
     describe('extractText', () => {
@@ -78,7 +83,11 @@ describe('Text Handler', () => {
         it('should send valid text to AI service and reply on WhatsApp', async () => {
             const result = await textHandler(makeTextEvent('Hello'), 'message.text');
 
-            expect(generateAIResponse).toHaveBeenCalledWith('Hello', '919876543210');
+            expect(generateAIResponse).toHaveBeenCalledWith(
+                'Hello',
+                '919876543210',
+                'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            );
             expect(sendMessage).toHaveBeenCalledWith('+919876543210', 'Hi! How can I help you today?');
             expect(result.handled).toBe(true);
             expect(result.event).toBe('message.text');

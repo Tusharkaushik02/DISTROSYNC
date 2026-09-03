@@ -18,7 +18,7 @@ class ProductService {
             return [];
         }
 
-        const products = await productRepository.search(cleanQuery, tenantId, { limit, onlyActive: true });
+        const products = await productRepository.search(cleanQuery, tenantId, { limit, onlyActive: false });
         console.log(`[ERP Product] 🔍 Search query="${cleanQuery}" | Found ${products.length} matching product(s)`);
         return products.map(p => this.formatProduct(p));
     }

@@ -44,7 +44,11 @@ async function textHandler(canonicalEvent, event) {
     try {
         console.log('[Webhook] Incoming WhatsApp message');
         console.log('[AI] Sending message to AI service');
-        const aiResponse = await generateAIResponse(context.text, context.waId);
+        const aiResponse = await generateAIResponse(
+            context.text,
+            context.waId,
+            process.env.WHATSAPP_TENANT_ID,
+        );
 
         console.log('[WhatsApp] Sending AI response');
         const outbound = await sendMessage(context.sender, aiResponse);
