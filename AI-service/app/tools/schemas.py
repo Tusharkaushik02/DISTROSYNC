@@ -47,6 +47,12 @@ class GetInventoryArgs(BaseModel):
 class GetCustomerArgs(BaseModel):
     customer_id: str | None = Field(default=None, description="UUID of the customer.")
     phone: str | None = Field(default=None, description="Customer phone number (E.164 or digits).")
+    name: str | None = Field(default=None, description="Customer name or search query to look up.")
+
+
+class SearchCustomersArgs(BaseModel):
+    query: str = Field(..., min_length=1, description="Customer name, company name, phone number, or identifier to search for.")
+    limit: int = Field(default=5, ge=1, le=20, description="Maximum number of customer candidates to return.")
 
 
 class GetOrderArgs(BaseModel):
@@ -55,6 +61,12 @@ class GetOrderArgs(BaseModel):
 
 class GetOrderStatusArgs(BaseModel):
     order_id: str = Field(..., min_length=1, description="UUID of the order to check status for.")
+
+
+class SearchOrdersArgs(BaseModel):
+    query: str = Field(..., min_length=1, description="Order query such as order ID, customer name, status, or product items.")
+    customer_id: str | None = Field(default=None, description="Optional UUID of customer to filter orders for.")
+    limit: int = Field(default=5, ge=1, le=20, description="Maximum number of orders to return.")
 
 
 class CreateOrderItemInput(BaseModel):

@@ -1,10 +1,11 @@
-from app.tools.customer_tools import get_customer
+from app.tools.customer_tools import get_customer, search_customers
 from app.tools.inventory_tools import get_inventory
 from app.tools.order_tools import (
     cancel_order,
     create_order,
     get_order,
     get_order_status,
+    search_orders,
 )
 from app.tools.product_tools import get_product, search_products
 from app.tools.registry import tool_registry
@@ -16,6 +17,8 @@ from app.tools.schemas import (
     GetOrderArgs,
     GetOrderStatusArgs,
     GetProductArgs,
+    SearchCustomersArgs,
+    SearchOrdersArgs,
     SearchProductsArgs,
 )
 
@@ -23,7 +26,7 @@ from app.tools.schemas import (
 
 tool_registry.register(
     name="search_products",
-    description="Search for products by name, SKU, or description in the catalog. Returns matching products with SKU, unit, and available quantity.",
+    description="Search for products by name, SKU, or description using semantic search. Resolves typos, synonyms, and natural language descriptions. Returns matching products with SKU, unit, price, and availability.",
     args_schema=SearchProductsArgs,
     executor=search_products,
     category="read",
@@ -46,10 +49,26 @@ tool_registry.register(
 )
 
 tool_registry.register(
+    name="search_customers",
+    description="Search for customers by name, company name, phone number, or external ID using semantic resolution.",
+    args_schema=SearchCustomersArgs,
+    executor=search_customers,
+    category="read",
+)
+
+tool_registry.register(
     name="get_customer",
-    description="Lookup a customer by customer UUID or phone number to find their ID and account details.",
+    description="Lookup a customer by customer UUID, phone number, or name to find their canonical account details.",
     args_schema=GetCustomerArgs,
     executor=get_customer,
+    category="read",
+)
+
+tool_registry.register(
+    name="search_orders",
+    description="Search orders by order ID, customer name, status, or product items using semantic search.",
+    args_schema=SearchOrdersArgs,
+    executor=search_orders,
     category="read",
 )
 

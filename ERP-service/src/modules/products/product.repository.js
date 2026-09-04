@@ -1,4 +1,5 @@
 const prisma = require('../../config/prisma');
+const { isValidUuid } = require('../../shared/utils/search');
 
 class ProductRepository {
     async findById(id, tenantId, tx = prisma) {
@@ -29,32 +30,50 @@ class ProductRepository {
         const stopWords = new Set([
             'a', 'about', 'an', 'and', 'can', 'could', 'details', 'do', 'find', 'for', 'get',
             'have', 'i', 'information', 'is', 'me', 'of', 'please', 'product', 'products',
-            'search', 'show', 'stock', 'tell', 'the', 'there', 'this', 'want', 'what', 'you'
+            'search', 'show', 'stock', 'tell', 'the', 'there', 'this', 'want', 'what', 'you',
+            'need', 'like', 'looking', 'look', 'buy', 'purchase', 'order', 'orders', 'item', 'items'
         ]);
-        const normalizedQuery = (query || '').trim().toLowerCase();
+        const cleanQuery = (query || '').trim();
+        const normalizedQuery = cleanQuery.toLowerCase();
         const searchTokens = normalizedQuery
             .split(/[^a-z0-9]+/)
             .filter(token => token.length > 1 && !stopWords.has(token));
 
-        if (!searchTokens.length) {
+        if (!cleanQuery || !searchTokens.length) {
             return [];
+        }
+
+        // Return a broad, tenant-scoped candidate set. The AI service owns
+        // typo/semantic ranking, so requiring every token here would discard
+        // useful alternatives such as Yellow Shampoo for "blue shampoo".
+        const tokenConditions = searchTokens.flatMap(token => [
+            { name: { contains: token, mode: 'insensitive' } },
+            { sku: { contains: token, mode: 'insensitive' } },
+            { description: { contains: token, mode: 'insensitive' } }
+        ]);
+
+        const exactConditions = [
+            { sku: { equals: cleanQuery, mode: 'insensitive' } }
+        ];
+        if (isValidUuid(cleanQuery)) {
+            exactConditions.push({ id: cleanQuery });
         }
 
         const whereClause = {
             tenantId,
             ...(onlyActive ? { active: true } : {}),
-            AND: searchTokens.map(token => ({
-                OR: [
-                    { name: { contains: token, mode: 'insensitive' } },
-                    { sku: { contains: token, mode: 'insensitive' } },
-                    { description: { contains: token, mode: 'insensitive' } }
-                ]
-            }))
+            OR: [
+                { name: { contains: cleanQuery, mode: 'insensitive' } },
+                { sku: { contains: cleanQuery, mode: 'insensitive' } },
+                { description: { contains: cleanQuery, mode: 'insensitive' } },
+                ...exactConditions,
+                ...tokenConditions
+            ]
         };
 
         return tx.product.findMany({
             where: whereClause,
-            take: limit,
+            take: Math.min(Math.max(limit * 5, limit), 100),
             include: {
                 inventory: true
             },

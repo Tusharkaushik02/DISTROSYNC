@@ -126,6 +126,16 @@ class ERPClient:
         )
         return result or []
 
+    async def list_products(self, tenant_id: str, limit: int = 100, skip: int = 0) -> list[dict]:
+        """List products for tenant."""
+        result = await self._request(
+            "GET",
+            "/api/v1/products",
+            tenant_id,
+            params={"take": limit, "skip": skip},
+        )
+        return result or []
+
     async def get_product(self, tenant_id: str, product_id: str) -> dict:
         """Get product details by product ID."""
         return await self._request("GET", f"/api/v1/products/{product_id}", tenant_id)
@@ -146,6 +156,26 @@ class ERPClient:
         """Get customer by phone number."""
         return await self._request("GET", f"/api/v1/customers/by-phone/{phone}", tenant_id)
 
+    async def list_customers(self, tenant_id: str, limit: int = 100, skip: int = 0) -> list[dict]:
+        """List customers for tenant."""
+        result = await self._request(
+            "GET",
+            "/api/v1/customers",
+            tenant_id,
+            params={"take": limit, "skip": skip},
+        )
+        return result or []
+
+    async def search_customers(self, tenant_id: str, query: str, limit: int = 20) -> list[dict]:
+        """Search customers by name, phone, or external ID."""
+        result = await self._request(
+            "GET",
+            "/api/v1/customers/search",
+            tenant_id,
+            params={"q": query, "limit": limit},
+        )
+        return result or []
+
     # ── Order APIs ────────────────────────────────────────────────────
 
     async def get_order(self, tenant_id: str, order_id: str) -> dict:
@@ -155,6 +185,44 @@ class ERPClient:
     async def get_order_status(self, tenant_id: str, order_id: str) -> dict:
         """Get status of an order."""
         return await self._request("GET", f"/api/v1/orders/{order_id}/status", tenant_id)
+
+    async def list_orders(
+        self,
+        tenant_id: str,
+        limit: int = 100,
+        skip: int = 0,
+        customer_id: str | None = None,
+    ) -> list[dict]:
+        """List orders for tenant."""
+        params: dict[str, Any] = {"take": limit, "skip": skip}
+        if customer_id:
+            params["customerId"] = customer_id
+        result = await self._request(
+            "GET",
+            "/api/v1/orders",
+            tenant_id,
+            params=params,
+        )
+        return result or []
+
+    async def search_orders(
+        self,
+        tenant_id: str,
+        query: str,
+        limit: int = 20,
+        customer_id: str | None = None,
+    ) -> list[dict]:
+        """Search orders by ID, status, customer, or product items."""
+        params: dict[str, Any] = {"q": query, "limit": limit}
+        if customer_id:
+            params["customerId"] = customer_id
+        result = await self._request(
+            "GET",
+            "/api/v1/orders/search",
+            tenant_id,
+            params=params,
+        )
+        return result or []
 
     async def create_order(
         self,

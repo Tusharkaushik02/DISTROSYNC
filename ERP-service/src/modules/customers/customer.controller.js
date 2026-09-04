@@ -1,8 +1,18 @@
 const customerService = require('./customer.service');
-const { createCustomerSchema, getCustomerByIdSchema, getCustomerByPhoneSchema } = require('./customer.schema');
+const { createCustomerSchema, getCustomerByIdSchema, getCustomerByPhoneSchema, searchCustomerSchema } = require('./customer.schema');
 const { successResponse } = require('../../shared/utils/response');
 
 class CustomerController {
+    async search(req, res, next) {
+        try {
+            const { q, limit } = searchCustomerSchema.parse(req.query);
+            const customers = await customerService.searchCustomers(q, req.tenantId, { limit });
+            return successResponse(res, customers);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getById(req, res, next) {
         try {
             const { id } = getCustomerByIdSchema.parse(req.params);

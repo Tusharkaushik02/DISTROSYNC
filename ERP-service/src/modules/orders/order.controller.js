@@ -1,8 +1,18 @@
 const orderService = require('./order.service');
-const { createOrderSchema, getOrderByIdSchema, updateOrderStatusSchema } = require('./order.schema');
+const { createOrderSchema, getOrderByIdSchema, updateOrderStatusSchema, searchOrderSchema } = require('./order.schema');
 const { successResponse } = require('../../shared/utils/response');
 
 class OrderController {
+    async search(req, res, next) {
+        try {
+            const { q, limit, customerId } = searchOrderSchema.parse(req.query);
+            const orders = await orderService.searchOrders(q, req.tenantId, { limit, customerId });
+            return successResponse(res, orders);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getById(req, res, next) {
         try {
             const { id } = getOrderByIdSchema.parse(req.params);

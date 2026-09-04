@@ -40,6 +40,12 @@ class CustomerService {
         });
     }
 
+    async searchCustomers(query, tenantId, { limit = 10 } = {}) {
+        const cleanQuery = (query || '').trim();
+        if (!cleanQuery) return [];
+        return customerRepository.search(cleanQuery, tenantId, { limit });
+    }
+
     async listCustomers(tenantId, options) {
         return customerRepository.list(tenantId, options);
     }

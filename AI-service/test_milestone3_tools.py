@@ -28,7 +28,8 @@ async def main():
         print("\n--- TEST 1: Tool Registry Verification ---")
         required_tools = [
             "search_products", "get_product", "get_inventory",
-            "get_customer", "get_order", "get_order_status",
+            "search_customers", "get_customer", "search_orders",
+            "get_order", "get_order_status",
             "create_order", "cancel_order"
         ]
         for tool_name in required_tools:
@@ -37,7 +38,7 @@ async def main():
             print(f"[OK] Tool '{tool_name}' is registered ({t_def.category.upper()})")
 
         llm_tools = tool_registry.get_tools_for_llm()
-        assert len(llm_tools) == 8, f"Expected 8 LLM tools, got {len(llm_tools)}"
+        assert len(llm_tools) == 10, f"Expected 10 LLM tools, got {len(llm_tools)}"
         print(f"[PASS] All {len(llm_tools)} tool definitions successfully formatted for Groq/OpenAI function calling.")
 
         # ── Test 2: Live Stock Check via Tool Calling ──

@@ -156,11 +156,6 @@ class OrderService {
         };
     }
 
-    async listOrders(tenantId, options = {}) {
-        const orders = await orderRepository.list(tenantId, options);
-        return orders.map(o => this.formatOrder(o));
-    }
-
     formatOrder(order) {
         return {
             id: order.id,
@@ -186,6 +181,18 @@ class OrderService {
             createdAt: order.createdAt,
             updatedAt: order.updatedAt
         };
+    }
+
+    async searchOrders(query, tenantId, options = {}) {
+        const cleanQuery = (query || '').trim();
+        if (!cleanQuery) return [];
+        const orders = await orderRepository.search(cleanQuery, tenantId, options);
+        return orders.map(o => this.formatOrder(o));
+    }
+
+    async listOrders(tenantId, options = {}) {
+        const orders = await orderRepository.list(tenantId, options);
+        return orders.map(o => this.formatOrder(o));
     }
 }
 

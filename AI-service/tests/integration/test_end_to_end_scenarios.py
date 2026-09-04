@@ -382,3 +382,134 @@ class TestEndToEndToolScenarios:
             assert "Blue Shampoo 250ml" in response
             assert "Blue Shampoo 500ml" in response
             assert "Which one" in response
+
+    @pytest.mark.asyncio
+    async def test_scenario_8_typo_out_of_stock_alternative(self, mock_orchestrator):
+        """TEST 8: Typo in search query ('blu shampoo') where product is out of stock
+
+        Expected: search_products resolves 'blu shampoo' to Blue Shampoo (out_of_stock)
+        and Yellow Shampoo (in_stock). LLM informs user Blue Shampoo is unavailable
+        and suggests Yellow Shampoo.
+        """
+        orchestrator, mock_client = mock_orchestrator
+
+        tc_search = ParsedToolCall(
+            id="call_typo_search",
+            name="search_products",
+            arguments={"query": "blu shampoo", "limit": 5},
+        )
+        resp_turn1 = ParsedLLMResponse(
+            content=None,
+            tool_calls=[tc_search],
+            has_tool_calls=True,
+            raw_message={"role": "assistant", "tool_calls": [{"id": "call_typo_search"}]},
+        )
+        resp_turn2 = ParsedLLMResponse(
+            content="Blue Shampoo is currently unavailable. We do have Yellow Shampoo available. Would you like to order the Yellow Shampoo instead?",
+            tool_calls=[],
+            has_tool_calls=False,
+        )
+
+        mock_client.generate_response.side_effect = [resp_turn1, resp_turn2]
+
+        with patch.object(erp_client, "search_products", new_callable=AsyncMock) as mock_search:
+            mock_search.return_value = [
+                {"id": "p1", "name": "Blue Shampoo", "sku": "SHMP-BLU", "active": True, "availableQuantity": 0},
+                {"id": "p2", "name": "Yellow Shampoo", "sku": "SHMP-YEL", "active": True, "availableQuantity": 25},
+            ]
+
+            response = await orchestrator.generate_response(
+                user_id="user_whatsapp_1",
+                message="I want blu shampoo",
+                tenant_id=self.tenant_id,
+            )
+
+            assert "Blue Shampoo is currently unavailable" in response
+            assert "Yellow Shampoo" in response
+
+    @pytest.mark.asyncio
+    async def test_scenario_9_customer_semantic_search(self, mock_orchestrator):
+        """TEST 9: Customer search with typo ('Jon Doe')
+
+        Expected: LLM calls search_customers -> resolves to 'John Doe Wholesale' -> LLM answers.
+        """
+        orchestrator, mock_client = mock_orchestrator
+
+        tc_search_cust = ParsedToolCall(
+            id="call_cust_search",
+            name="search_customers",
+            arguments={"query": "Jon Doe", "limit": 5},
+        )
+        resp_turn1 = ParsedLLMResponse(
+            content=None,
+            tool_calls=[tc_search_cust],
+            has_tool_calls=True,
+            raw_message={"role": "assistant", "tool_calls": [{"id": "call_cust_search"}]},
+        )
+        resp_turn2 = ParsedLLMResponse(
+            content="Found customer *John Doe Wholesale* (Phone: +919876543210).",
+            tool_calls=[],
+            has_tool_calls=False,
+        )
+
+        mock_client.generate_response.side_effect = [resp_turn1, resp_turn2]
+
+        with patch.object(erp_client, "search_customers", new_callable=AsyncMock) as mock_search_cust:
+            mock_search_cust.return_value = [
+                {"id": self.customer_id, "name": "John Doe Wholesale", "phone": "+919876543210", "externalId": "EXT-1"}
+            ]
+
+            response = await orchestrator.generate_response(
+                user_id="user_whatsapp_1",
+                message="Find customer details for Jon Doe",
+                tenant_id=self.tenant_id,
+            )
+
+            assert "John Doe Wholesale" in response
+
+    @pytest.mark.asyncio
+    async def test_scenario_10_order_semantic_search(self, mock_orchestrator):
+        """TEST 10: Order search with natural language ('shampoo order')
+
+        Expected: LLM calls search_orders -> resolves to the order -> LLM confirms status.
+        """
+        orchestrator, mock_client = mock_orchestrator
+
+        tc_search_order = ParsedToolCall(
+            id="call_order_search",
+            name="search_orders",
+            arguments={"query": "shampoo order", "limit": 5},
+        )
+        resp_turn1 = ParsedLLMResponse(
+            content=None,
+            tool_calls=[tc_search_order],
+            has_tool_calls=True,
+            raw_message={"role": "assistant", "tool_calls": [{"id": "call_order_search"}]},
+        )
+        resp_turn2 = ParsedLLMResponse(
+            content=f"Your order *{self.order_id}* containing Blue Shampoo is currently *CONFIRMED*.",
+            tool_calls=[],
+            has_tool_calls=False,
+        )
+
+        mock_client.generate_response.side_effect = [resp_turn1, resp_turn2]
+
+        with patch.object(erp_client, "search_orders", new_callable=AsyncMock) as mock_search_orders:
+            mock_search_orders.return_value = [
+                {
+                    "id": self.order_id,
+                    "status": "CONFIRMED",
+                    "totalAmount": 300.0,
+                    "customer": {"id": self.customer_id, "name": "John Doe"},
+                    "items": [{"productId": self.product_id, "sku": "SHMP-BLU", "productName": "Blue Shampoo", "quantity": 2}],
+                }
+            ]
+
+            response = await orchestrator.generate_response(
+                user_id="user_whatsapp_1",
+                message="Where is my shampoo order?",
+                tenant_id=self.tenant_id,
+            )
+
+            assert self.order_id in response
+            assert "CONFIRMED" in response

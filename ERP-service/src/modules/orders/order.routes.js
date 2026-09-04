@@ -9,6 +9,7 @@ router.use(authMiddleware);
 // Routes
 router.post('/', orderController.create.bind(orderController));
 router.get('/', orderController.list.bind(orderController));
+router.get('/search', orderController.search.bind(orderController));
 router.get('/:id/status', orderController.getStatus.bind(orderController));
 router.get('/:id', orderController.getById.bind(orderController));
 router.patch('/:id/status', orderController.updateStatus.bind(orderController));

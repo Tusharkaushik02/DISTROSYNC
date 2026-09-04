@@ -28,8 +28,15 @@ const updateOrderStatusSchema = z.object({
     })
 });
 
+const searchOrderSchema = z.object({
+    q: z.string().min(1, 'Search query parameter "q" cannot be empty'),
+    limit: z.coerce.number().int().positive().max(100).default(10),
+    customerId: z.string().uuid().optional()
+});
+
 module.exports = {
     createOrderSchema,
     getOrderByIdSchema,
-    updateOrderStatusSchema
+    updateOrderStatusSchema,
+    searchOrderSchema
 };

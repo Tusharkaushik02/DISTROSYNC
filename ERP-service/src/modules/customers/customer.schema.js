@@ -14,8 +14,14 @@ const getCustomerByPhoneSchema = z.object({
     phone: z.string().min(5, 'Phone number must be at least 5 digits')
 });
 
+const searchCustomerSchema = z.object({
+    q: z.string().min(1, 'Search query parameter "q" cannot be empty'),
+    limit: z.coerce.number().int().positive().max(100).default(10)
+});
+
 module.exports = {
     createCustomerSchema,
     getCustomerByIdSchema,
-    getCustomerByPhoneSchema
+    getCustomerByPhoneSchema,
+    searchCustomerSchema
 };
