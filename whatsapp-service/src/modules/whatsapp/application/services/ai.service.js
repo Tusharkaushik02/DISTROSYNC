@@ -1,5 +1,3 @@
-const DEFAULT_TIMEOUT_MS = 30000;
-
 class AIServiceError extends Error {
     constructor(message, statusCode = 502) {
         super(message);
@@ -27,10 +25,6 @@ async function generateAIResponse(message, userId, tenantId = process.env.WHATSA
         throw new AIServiceError('WhatsApp tenant ID is not configured', 500);
     }
 
-    const controller = new AbortController();
-    const timeoutMs = parseInt(process.env.AI_SERVICE_TIMEOUT_MS, 10) || DEFAULT_TIMEOUT_MS;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
         const response = await fetch(getConversationUrl(), {
             method: 'POST',
@@ -42,7 +36,6 @@ async function generateAIResponse(message, userId, tenantId = process.env.WHATSA
                 message: cleanMessage,
                 tenant_id: tenantId.trim(),
             }),
-            signal: controller.signal,
         });
 
         if (!response.ok) {
@@ -62,15 +55,10 @@ async function generateAIResponse(message, userId, tenantId = process.env.WHATSA
         console.log('[AI] Received response');
         return aiText;
     } catch (error) {
-        if (error.name === 'AbortError') {
-            throw new AIServiceError('AI service request timed out', 504);
-        }
         if (error instanceof AIServiceError) {
             throw error;
         }
         throw new AIServiceError('Failed to call AI service');
-    } finally {
-        clearTimeout(timeoutId);
     }
 }
 

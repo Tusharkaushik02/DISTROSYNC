@@ -9,7 +9,6 @@ describe('AI service client', () => {
         jest.clearAllMocks();
         global.fetch = jest.fn();
         delete process.env.AI_SERVICE_URL;
-        delete process.env.AI_SERVICE_TIMEOUT_MS;
         delete process.env.WHATSAPP_TENANT_ID;
     });
 

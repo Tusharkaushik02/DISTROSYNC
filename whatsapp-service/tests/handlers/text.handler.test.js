@@ -6,7 +6,11 @@ jest.mock('../../src/modules/whatsapp/application/services/whatsapp.service', ()
     sendMessage: jest.fn(),
 }));
 
-const { textHandler, extractText, buildTextContext } = require('../../src/modules/whatsapp/application/handlers/text.handler');
+const {
+    textHandler,
+    extractText,
+    buildTextContext,
+} = require('../../src/modules/whatsapp/application/handlers/text.handler');
 const { generateAIResponse } = require('../../src/modules/whatsapp/application/services/ai.service');
 const { sendMessage } = require('../../src/modules/whatsapp/application/services/whatsapp.service');
 const { EVENT_TYPES, MESSAGE_TYPES } = require('../../src/modules/whatsapp/application/events/event.types');
