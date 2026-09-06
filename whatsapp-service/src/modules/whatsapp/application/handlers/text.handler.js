@@ -48,6 +48,7 @@ async function textHandler(canonicalEvent, event) {
             context.text,
             context.waId,
             process.env.WHATSAPP_TENANT_ID,
+            context.sender,
         );
 
         console.log('[WhatsApp] Sending AI response');

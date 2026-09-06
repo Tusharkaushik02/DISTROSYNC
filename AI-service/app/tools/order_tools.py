@@ -46,6 +46,7 @@ async def search_orders(
     args: SearchOrdersArgs,
     tenant_id: str,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Search orders in ERP using multi-stage semantic entity resolution."""
     candidates_by_id: dict[str, dict[str, Any]] = {}
@@ -146,6 +147,7 @@ async def get_order(
     args: GetOrderArgs,
     tenant_id: str,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Retrieve full order details by order ID or natural language query."""
     try:
@@ -197,6 +199,7 @@ async def get_order_status(
     args: GetOrderStatusArgs,
     tenant_id: str,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Retrieve the current status of an order."""
     try:
@@ -238,30 +241,64 @@ async def get_order_status(
 async def create_order(
     args: CreateOrderArgs,
     tenant_id: str,
+    authenticated_customer: dict[str, Any] | None = None,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
-    """Resolve any non-canonical references, then create an ERP order.
+    """Create an ERP order strictly bound to the authenticated WhatsApp customer.
 
-    UUIDs are passed through to ERP, whose transaction re-reads the customer,
-    product, price, and inventory under the tenant scope. Human-readable names
-    and SKUs are resolved here first and are never sent as ``productId`` or
-    ``customerId`` values.
+    Security & Authorization Rules:
+    1. An unregistered WhatsApp sender (authenticated_customer is None) is strictly rejected.
+    2. If the LLM or user supplies a customer_id that differs from authenticated_customer.id / external_id,
+       the request is blocked with CUSTOMER_MISMATCH.
+    3. The order customer ID is unconditionally bound to authenticated_customer["id"].
     """
-    customer_id = args.customer_id
-    if not _is_uuid(customer_id):
-        customer_result = await search_customers(
-            args=SearchCustomersArgs(query=customer_id, limit=settings.SEMANTIC_SEARCH_TOP_K),
-            tenant_id=tenant_id,
+    # ── 1. Hard Check: Authenticated Customer Required ────────────────────────
+    if not authenticated_customer or not authenticated_customer.get("id"):
+        logger.warning("[ORDER] Attempted order creation without authenticated customer identity")
+        print("[ORDER] [BLOCKED] Unregistered WhatsApp customer cannot create orders")
+        return ToolResult.fail(
+            tool_name="create_order",
+            code="UNREGISTERED_CUSTOMER",
+            message="I couldn't find a customer account registered with this WhatsApp number. I can't place an order until this number is registered with a customer account.",
         )
-        customer_match = _single_high_confidence_match(customer_result.data if customer_result.success else None)
-        if not customer_match:
+
+    auth_cust_id = str(authenticated_customer["id"]).strip()
+    auth_cust_name = authenticated_customer.get("name", "Registered Customer")
+    auth_cust_code = str(authenticated_customer.get("external_id") or "").strip()
+
+    # ── 2. Hard Check: Validate requested customer_id against authenticated identity ──
+    requested_cust_id = (args.customer_id or "").strip()
+    if requested_cust_id:
+        is_exact_id = requested_cust_id == auth_cust_id
+        is_exact_code = bool(auth_cust_code and (requested_cust_id.lower() == auth_cust_code.lower()))
+
+        if not is_exact_id and not is_exact_code:
+            logger.warning(
+                "[ORDER] BLOCKED customer mismatch: requested='%s', authorized='%s' (%s)",
+                requested_cust_id,
+                auth_cust_id,
+                auth_cust_name,
+            )
+            print(f"[ORDER] Requested customer: {requested_cust_id}")
+            print(f"[ORDER] Authorized customer: {auth_cust_id} ({auth_cust_name})")
+            print("[ORDER] [BLOCKED] customer mismatch")
             return ToolResult.fail(
                 tool_name="create_order",
-                code="CUSTOMER_RESOLUTION_REQUIRED",
-                message="The customer reference is ambiguous or could not be resolved. Please provide the customer ID or clarify the customer.",
+                code="CUSTOMER_MISMATCH",
+                message=f"Your WhatsApp number is registered with {auth_cust_name} ({auth_cust_code or auth_cust_id}), so I can only place orders under that customer account. I cannot place an order under another customer's account.",
+                details={
+                    "requested_customer": requested_cust_id,
+                    "authorized_customer_id": auth_cust_id,
+                    "authorized_customer_name": auth_cust_name,
+                },
             )
-        customer_id = customer_match["id"]
 
+    # ── 3. Unconditionally inject the authoritative customer ID ──────────────
+    customer_id = auth_cust_id
+    print(f"[ORDER] Authorized customer: {auth_cust_id} ({auth_cust_name})")
+
+    # ── 4. Resolve Products & Quantities ─────────────────────────────────────
     resolved_items = []
     for item in args.items:
         product_id = item.product_id
@@ -302,6 +339,8 @@ async def create_order(
         idempotency_key=idempotency_key,
     )
 
+    print(f"[ORDER] [OK] Order created successfully ID: {order.get('id')} for customer: {auth_cust_name}")
+
     return ToolResult.ok(
         tool_name="create_order",
         data={
@@ -319,6 +358,7 @@ async def cancel_order(
     args: CancelOrderArgs,
     tenant_id: str,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Resolve a human-readable order reference before cancelling it."""
     order_id = args.order_id

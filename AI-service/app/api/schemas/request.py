@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 class ConversationRequest(BaseModel):
     user_id: str = Field(..., min_length=1, description="WhatsApp user identifier (WaId)")
+    phone: str | None = Field(default=None, description="Sender WhatsApp phone number in E.164 or digits format")
     message: str = Field(..., min_length=1, description="User message text")
     tenant_id: str = Field(..., min_length=1, description="Tenant identifier UUID for multi-tenant context")
 

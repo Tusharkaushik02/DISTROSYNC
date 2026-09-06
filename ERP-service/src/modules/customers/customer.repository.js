@@ -12,11 +12,29 @@ class CustomerRepository {
     }
 
     async findByPhone(phone, tenantId) {
+        const cleanPhone = (phone || '').trim();
+        if (!cleanPhone) return null;
+
+        const digitsOnly = cleanPhone.replace(/\D/g, '');
+        const candidates = new Set([cleanPhone]);
+        if (digitsOnly) {
+            candidates.add(digitsOnly);
+            if (digitsOnly.length === 10) {
+                candidates.add(`+91${digitsOnly}`);
+                candidates.add(`91${digitsOnly}`);
+            } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+                candidates.add(`+${digitsOnly}`);
+                candidates.add(digitsOnly.slice(2));
+            }
+        }
+
         return prisma.customer.findFirst({
             where: {
-                phone,
-                tenantId
-            }
+                tenantId,
+                phone: {
+                    in: Array.from(candidates),
+                },
+            },
         });
     }
 

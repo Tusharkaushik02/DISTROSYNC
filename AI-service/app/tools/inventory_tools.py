@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from app.clients.erp_client import erp_client
 from app.tools.schemas import GetInventoryArgs, ToolResult
 
@@ -9,6 +10,7 @@ async def get_inventory(
     args: GetInventoryArgs,
     tenant_id: str,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Retrieve available and reserved inventory for a product."""
     inventory = await erp_client.get_inventory(

@@ -11,7 +11,7 @@ function getConversationUrl() {
     return `${baseUrl.replace(/\/+$/, '')}/api/v1/conversation`;
 }
 
-async function generateAIResponse(message, userId, tenantId = process.env.WHATSAPP_TENANT_ID) {
+async function generateAIResponse(message, userId, tenantId = process.env.WHATSAPP_TENANT_ID, phone = null) {
     const cleanMessage = (message || '').trim();
     if (!cleanMessage) {
         throw new AIServiceError('Message cannot be empty', 400);
@@ -25,6 +25,8 @@ async function generateAIResponse(message, userId, tenantId = process.env.WHATSA
         throw new AIServiceError('WhatsApp tenant ID is not configured', 500);
     }
 
+    const senderPhone = (phone || userId || '').trim();
+
     try {
         const response = await fetch(getConversationUrl(), {
             method: 'POST',
@@ -33,6 +35,7 @@ async function generateAIResponse(message, userId, tenantId = process.env.WHATSA
             },
             body: JSON.stringify({
                 user_id: userId.trim(),
+                phone: senderPhone,
                 message: cleanMessage,
                 tenant_id: tenantId.trim(),
             }),

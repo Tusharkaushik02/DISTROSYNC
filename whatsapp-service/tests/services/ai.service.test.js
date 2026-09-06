@@ -37,6 +37,7 @@ describe('AI service client', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: '919876543210',
+                    phone: '919876543210',
                     message: 'Hello',
                     tenant_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
                 }),

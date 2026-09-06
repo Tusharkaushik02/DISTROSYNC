@@ -44,7 +44,7 @@ class ERPClient:
         url = f"{self.base_url}{path}"
         headers = self._get_headers(tenant_id, idempotency_key)
 
-        print(f"[ERP Client] 🌐 {method} {url} (Tenant: {tenant_id})")
+        print(f"[ERP Client] {method} {url} (Tenant: {tenant_id})")
         logger.info(
             "[ERPClient] %s %s | Tenant: %s",
             method,

@@ -13,6 +13,7 @@ async def search_customers(
     args: SearchCustomersArgs,
     tenant_id: str,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Search customers in ERP using multi-stage semantic entity resolution."""
     candidates_by_id: dict[str, dict[str, Any]] = {}
@@ -79,10 +80,22 @@ async def search_customers(
 async def get_customer(
     args: GetCustomerArgs,
     tenant_id: str,
+    authenticated_customer: dict[str, Any] | None = None,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Retrieve customer information by customer ID, phone number, or natural language name."""
     if not args.customer_id and not args.phone and not args.name:
+        if authenticated_customer:
+            return ToolResult.ok(
+                tool_name="get_customer",
+                data={
+                    "id": authenticated_customer.get("id"),
+                    "name": authenticated_customer.get("name"),
+                    "phone": authenticated_customer.get("phone"),
+                    "external_id": authenticated_customer.get("external_id"),
+                },
+            )
         return ToolResult.fail(
             tool_name="get_customer",
             code="MISSING_CUSTOMER_IDENTIFIER",

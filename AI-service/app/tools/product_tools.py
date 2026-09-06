@@ -12,6 +12,7 @@ async def search_products(
     args: SearchProductsArgs,
     tenant_id: str,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Search products in ERP using multi-stage semantic entity resolution."""
     candidates_by_id: dict[str, dict[str, Any]] = {}
@@ -123,6 +124,7 @@ async def get_product(
     args: GetProductArgs,
     tenant_id: str,
     idempotency_key: str | None = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Retrieve detailed product information by product ID or canonical identifier."""
     product = await erp_client.get_product(

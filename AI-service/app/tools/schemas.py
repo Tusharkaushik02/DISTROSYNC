@@ -75,7 +75,7 @@ class CreateOrderItemInput(BaseModel):
 
 
 class CreateOrderArgs(BaseModel):
-    customer_id: str = Field(..., min_length=1, description="UUID of the customer placing the order.")
+    customer_id: str | None = Field(default=None, description="Optional customer ID. The backend automatically binds the order to the authenticated WhatsApp customer.")
     items: list[CreateOrderItemInput] = Field(..., min_length=1, description="List of items to order with product_id and quantity.")
 
 

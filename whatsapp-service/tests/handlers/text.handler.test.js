@@ -91,6 +91,7 @@ describe('Text Handler', () => {
                 'Hello',
                 '919876543210',
                 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+                '+919876543210',
             );
             expect(sendMessage).toHaveBeenCalledWith('+919876543210', 'Hi! How can I help you today?');
             expect(result.handled).toBe(true);

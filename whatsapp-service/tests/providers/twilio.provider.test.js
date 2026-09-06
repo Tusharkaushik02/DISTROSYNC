@@ -1,11 +1,11 @@
-const createMock = jest.fn();
-const twilioFactory = jest.fn(() => ({
+const mockCreate = jest.fn();
+const mockTwilioFactory = jest.fn(() => ({
     messages: {
-        create: createMock,
+        create: mockCreate,
     },
 }));
 
-twilioFactory.twiml = {
+mockTwilioFactory.twiml = {
     MessagingResponse: class {
         message() {}
         toString() {
@@ -14,7 +14,7 @@ twilioFactory.twiml = {
     },
 };
 
-jest.mock('twilio', () => twilioFactory);
+jest.mock('twilio', () => mockTwilioFactory);
 
 describe('Twilio provider sendMessage', () => {
     let sendMessage;
@@ -29,7 +29,7 @@ describe('Twilio provider sendMessage', () => {
     });
 
     it('should send normal WhatsApp text with body and no content template fields', async () => {
-        createMock.mockResolvedValue({
+        mockCreate.mockResolvedValue({
             sid: 'SMout123',
             to: 'whatsapp:+919876543210',
             from: 'whatsapp:+14155238886',
@@ -40,17 +40,17 @@ describe('Twilio provider sendMessage', () => {
 
         await sendMessage('+919876543210', 'Hello! How can I help you today?');
 
-        expect(createMock).toHaveBeenCalledWith({
+        expect(mockCreate).toHaveBeenCalledWith({
             from: 'whatsapp:+14155238886',
             to: 'whatsapp:+919876543210',
             body: 'Hello! How can I help you today?',
         });
-        expect(createMock.mock.calls[0][0]).not.toHaveProperty('contentSid');
-        expect(createMock.mock.calls[0][0]).not.toHaveProperty('contentVariables');
+        expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('contentSid');
+        expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('contentVariables');
     });
 
     it('should reject empty message body', async () => {
         await expect(sendMessage('+919876543210', '   ')).rejects.toThrow("Message 'body' is required");
-        expect(createMock).not.toHaveBeenCalled();
+        expect(mockCreate).not.toHaveBeenCalled();
     });
 });

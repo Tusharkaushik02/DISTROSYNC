@@ -34,10 +34,11 @@ class ToolExecutor:
         tool_name: str,
         arguments: dict[str, Any] | str,
         tenant_id: str,
+        authenticated_customer: dict[str, Any] | None = None,
     ) -> ToolResult:
         """Validate and execute a tool with the authenticated tenant context."""
         start_time = time.time()
-        logger.info("[ToolExecutor] START tool=%s tenant=%s", tool_name, tenant_id)
+        logger.info("[ToolExecutor] START tool=%s tenant=%s customer=%s", tool_name, tenant_id, authenticated_customer.get("id") if authenticated_customer else "None")
 
         # 1. Parse string arguments if received as JSON string
         if isinstance(arguments, str):
@@ -92,9 +93,10 @@ class ToolExecutor:
         idempotency_key = None
         if tool_def.category == "write":
             _clean_idempotency_cache()
-            # Generate deterministic idempotency hash based on tenant, tool, and args
+            # Generate deterministic idempotency hash based on tenant, customer, tool, and args
+            cust_id = (authenticated_customer or {}).get("id", "anon")
             args_hash = hashlib.sha256(
-                f"{tenant_id}:{tool_name}:{json.dumps(validated_args.model_dump(), sort_keys=True)}".encode()
+                f"{tenant_id}:{cust_id}:{tool_name}:{json.dumps(validated_args.model_dump(), sort_keys=True)}".encode()
             ).hexdigest()
             idempotency_key = f"idemp_{args_hash[:24]}"
 
@@ -103,11 +105,12 @@ class ToolExecutor:
                 logger.info("[ToolExecutor] Idempotent hit for %s (key=%s)", tool_name, idempotency_key)
                 return ToolResult.ok(tool_name=tool_name, data=cached_result)
 
-        # 5. Execute tool with tenant context
+        # 5. Execute tool with tenant context and authenticated customer
         try:
             result = await executor_fn(
                 args=validated_args,
                 tenant_id=tenant_id,
+                authenticated_customer=authenticated_customer,
                 idempotency_key=idempotency_key,
             )
 
