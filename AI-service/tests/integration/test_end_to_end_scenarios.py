@@ -148,7 +148,14 @@ class TestEndToEndToolScenarios:
 
         mock_client.generate_response.side_effect = [resp_turn1, resp_turn2]
 
-        with patch.object(erp_client, "create_order", new_callable=AsyncMock) as mock_create:
+        with patch.object(erp_client, "get_customer_by_phone", new_callable=AsyncMock) as mock_get_phone, \
+             patch.object(erp_client, "create_order", new_callable=AsyncMock) as mock_create:
+            mock_get_phone.return_value = {
+                "id": self.customer_id,
+                "name": "John Doe",
+                "phone": "+919876543210",
+                "externalId": "CUST-001",
+            }
             mock_create.return_value = {
                 "id": self.order_id,
                 "status": "CONFIRMED",
@@ -158,9 +165,10 @@ class TestEndToEndToolScenarios:
             }
 
             response = await orchestrator.generate_response(
-                user_id="user_whatsapp_1",
+                user_id="+919876543210",
                 message="Create an order for 20 boxes of ABC123",
                 tenant_id=self.tenant_id,
+                phone="+919876543210",
             )
 
             assert "created successfully" in response
@@ -198,7 +206,14 @@ class TestEndToEndToolScenarios:
 
         mock_client.generate_response.side_effect = [resp_turn1, resp_turn2]
 
-        with patch.object(erp_client, "create_order", new_callable=AsyncMock) as mock_create:
+        with patch.object(erp_client, "get_customer_by_phone", new_callable=AsyncMock) as mock_get_phone, \
+             patch.object(erp_client, "create_order", new_callable=AsyncMock) as mock_create:
+            mock_get_phone.return_value = {
+                "id": self.customer_id,
+                "name": "John Doe",
+                "phone": "+919876543210",
+                "externalId": "CUST-001",
+            }
             mock_create.side_effect = ERPServiceError(
                 "Insufficient stock for ABC123",
                 error_code="INSUFFICIENT_INVENTORY",
@@ -206,9 +221,10 @@ class TestEndToEndToolScenarios:
             )
 
             response = await orchestrator.generate_response(
-                user_id="user_whatsapp_1",
+                user_id="+919876543210",
                 message="Create an order for 999999 boxes of ABC123",
                 tenant_id=self.tenant_id,
+                phone="+919876543210",
             )
 
             assert "only 73 boxes of ABC123 available" in response or "cannot place" in response
@@ -513,3 +529,105 @@ class TestEndToEndToolScenarios:
 
             assert self.order_id in response
             assert "CONFIRMED" in response
+
+    @pytest.mark.asyncio
+    async def test_scenario_11_search_knowledge_base_policy(self, mock_orchestrator):
+        """TEST 11: RAG Knowledge Base search for company policy.
+
+        Expected: LLM calls search_knowledge_base -> RAG hybrid search returns document chunks ->
+        LLM answers using retrieved policy information.
+        """
+        orchestrator, mock_client = mock_orchestrator
+
+        tc_search_rag = ParsedToolCall(
+            id="call_rag_1",
+            name="search_knowledge_base",
+            arguments={"query": "return policy for damaged items", "top_k": 3},
+        )
+        resp_turn1 = ParsedLLMResponse(
+            content=None,
+            tool_calls=[tc_search_rag],
+            has_tool_calls=True,
+            raw_message={"role": "assistant", "tool_calls": [{"id": "call_rag_1"}]},
+        )
+        resp_turn2 = ParsedLLMResponse(
+            content="According to our company policy, damaged goods must be reported within 48 hours for a free replacement.",
+            tool_calls=[],
+            has_tool_calls=False,
+        )
+
+        mock_client.generate_response.side_effect = [resp_turn1, resp_turn2]
+
+        mock_embedder = MagicMock()
+        mock_embedder.embed.return_value = [[0.1] * 384]
+
+        mock_store = MagicMock()
+        mock_store.hybrid_search.return_value = [
+            {
+                "text": "Damaged goods must be reported within 48 hours for a free replacement.",
+                "score": 0.88,
+                "filename": "return_policy.pdf",
+                "page_number": 1,
+                "chunk_index": 0,
+                "document_id": "doc-policy-1",
+            }
+        ]
+
+        with patch("app.tools.catalog_tools.get_embedding_service", return_value=mock_embedder), \
+             patch("app.tools.catalog_tools.get_vector_store", return_value=mock_store):
+
+            response = await orchestrator.generate_response(
+                user_id="user_whatsapp_1",
+                message="What is the return policy for damaged items?",
+                tenant_id=self.tenant_id,
+            )
+
+            assert "48 hours" in response
+            assert "replacement" in response
+            mock_store.hybrid_search.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_scenario_12_search_knowledge_base_no_results(self, mock_orchestrator):
+        """TEST 12: RAG Knowledge Base search with no matches.
+
+        Expected: LLM calls search_knowledge_base -> RAG returns empty results ->
+        LLM states it could not find the information rather than hallucinating.
+        """
+        orchestrator, mock_client = mock_orchestrator
+
+        tc_search_rag = ParsedToolCall(
+            id="call_rag_2",
+            name="search_knowledge_base",
+            arguments={"query": "spaceship rental policy"},
+        )
+        resp_turn1 = ParsedLLMResponse(
+            content=None,
+            tool_calls=[tc_search_rag],
+            has_tool_calls=True,
+            raw_message={"role": "assistant", "tool_calls": [{"id": "call_rag_2"}]},
+        )
+        resp_turn2 = ParsedLLMResponse(
+            content="I searched our company knowledge base, but could not find any information regarding spaceship rental policy.",
+            tool_calls=[],
+            has_tool_calls=False,
+        )
+
+        mock_client.generate_response.side_effect = [resp_turn1, resp_turn2]
+
+        mock_embedder = MagicMock()
+        mock_embedder.embed.return_value = [[0.1] * 384]
+
+        mock_store = MagicMock()
+        mock_store.hybrid_search.return_value = []
+
+        with patch("app.tools.catalog_tools.get_embedding_service", return_value=mock_embedder), \
+             patch("app.tools.catalog_tools.get_vector_store", return_value=mock_store):
+
+            response = await orchestrator.generate_response(
+                user_id="user_whatsapp_1",
+                message="What is your spaceship rental policy?",
+                tenant_id=self.tenant_id,
+            )
+
+            assert "could not find" in response
+

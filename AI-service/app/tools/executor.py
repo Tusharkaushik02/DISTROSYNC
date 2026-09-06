@@ -1,4 +1,5 @@
 import hashlib
+import inspect
 import json
 import logging
 import time
@@ -107,12 +108,22 @@ class ToolExecutor:
 
         # 5. Execute tool with tenant context and authenticated customer
         try:
-            result = await executor_fn(
-                args=validated_args,
-                tenant_id=tenant_id,
-                authenticated_customer=authenticated_customer,
-                idempotency_key=idempotency_key,
-            )
+            call_kwargs = {
+                "args": validated_args,
+                "tenant_id": tenant_id,
+            }
+            try:
+                sig = inspect.signature(executor_fn)
+                has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+                if has_var_kw or "authenticated_customer" in sig.parameters:
+                    call_kwargs["authenticated_customer"] = authenticated_customer
+                if has_var_kw or "idempotency_key" in sig.parameters:
+                    call_kwargs["idempotency_key"] = idempotency_key
+            except (ValueError, TypeError):
+                call_kwargs["authenticated_customer"] = authenticated_customer
+                call_kwargs["idempotency_key"] = idempotency_key
+
+            result = await executor_fn(**call_kwargs)
 
             # Cache successful write results
             if tool_def.category == "write" and idempotency_key and result.success:

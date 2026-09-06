@@ -94,10 +94,12 @@ class TestConversationOrchestrator:
             tool_name="search_products",
             arguments={"query": "ABC123"},
             tenant_id="tenant_123",
+            authenticated_customer=None,
         )
         mock_executor.execute.assert_any_call(
             tool_name="get_inventory",
             arguments={"product_id": "prod-123"},
             tenant_id="tenant_123",
+            authenticated_customer=None,
         )
         assert mock_client.generate_response.call_count == 3

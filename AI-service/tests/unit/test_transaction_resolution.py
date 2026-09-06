@@ -79,6 +79,7 @@ async def test_create_order_resolves_names_to_canonical_ids_before_write():
                 items=[CreateOrderItemInput(product_id="SHMP-BLU-001", quantity=1)],
             ),
             TENANT_ID,
+            authenticated_customer={"id": CUSTOMER_ID, "name": "John Doe Wholesale"},
         )
 
         assert result.success
@@ -117,6 +118,7 @@ async def test_create_order_does_not_silently_replace_out_of_stock_product():
                 items=[CreateOrderItemInput(product_id="blue shampoo", quantity=1)],
             ),
             TENANT_ID,
+            authenticated_customer={"id": CUSTOMER_ID, "name": "John Doe Wholesale"},
         )
 
         assert not result.success

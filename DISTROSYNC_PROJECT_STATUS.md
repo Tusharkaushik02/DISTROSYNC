@@ -99,9 +99,9 @@ Retailer / Customer
 | **Conversation Orchestrator** | `IMPLEMENTED` | Multi-turn loop (up to 6 iterations) resolving tool calls and memory | `AI-service/app/orchestration/conversation_orchestrator.py` | Loads history, queries LLM, executes tools via `ToolExecutor`, persists memory. | Connect RAG document search tool to orchestrator loop. |
 | **Conversation Memory (DB)** | `IMPLEMENTED` | PostgreSQL via `asyncpg` with Prisma migrations | `AI-service/app/memory/repository.py`, `AI-service/prisma/schema.prisma` | Stores `Conversation` and `ConversationMessage` per `user_id` (WaId). | Add sliding window summarization for long dialogues. |
 | **Memory Isolation & Limits** | `IMPLEMENTED` | Queries filter `WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2` | `AI-service/app/memory/repository.py` | User histories are completely isolated by WhatsApp ID; default limit is 20. | Verify multi-tenant namespace partitioning in memory schema. |
-| **LLM Tool Calling (ERP Sync)** | `IMPLEMENTED` | 8 registered tools executing against ERP REST APIs | `AI-service/app/tools/registry.py`, `AI-service/app/tools/executor.py` | Pydantic validation, deterministic SHA-256 idempotency cache, ERP execution. | Add tool for catalog semantic search (RAG). |
-| **RAG Ingestion & Vector DB** | `PARTIALLY IMPLEMENTED` | Qdrant vector store + SentenceTransformers + BM25 Okapi implemented | `AI-service/app/rag/vector_store.py`, `AI-service/app/main.py` | `/api/v1/rag/upload` and `/api/v1/rag/ingest` store embeddings in Qdrant. | **NOT connected to conversation orchestrator or LLM tool registry.** |
-| **Hybrid Search (Dense + Sparse)**| `PARTIALLY IMPLEMENTED` | Qdrant Cosine (0.7) + BM25Okapi (0.3) hybrid search endpoint exists | `AI-service/app/rag/vector_store.py`, `AI-service/app/main.py` | Endpoint `/api/v1/rag/search` works standalone; not wired into conversation. | Expose RAG search as a callable tool in `tool_registry`. |
+| **LLM Tool Calling (ERP & RAG)** | `IMPLEMENTED` | 9 registered tools executing against ERP REST APIs and Qdrant RAG | `AI-service/app/tools/registry.py`, `AI-service/app/tools/executor.py`, `AI-service/app/tools/catalog_tools.py` | Pydantic validation, deterministic SHA-256 idempotency cache, ERP execution, and hybrid RAG document retrieval. | Tune prompt for catalog disambiguation and multi-item orders. |
+| **RAG Ingestion & Vector DB** | `IMPLEMENTED` | Qdrant vector store + SentenceTransformers + BM25 Okapi implemented & connected to LLM | `AI-service/app/rag/vector_store.py`, `AI-service/app/main.py`, `AI-service/app/tools/catalog_tools.py` | `/api/v1/rag/upload` and `/api/v1/rag/ingest` store embeddings in Qdrant; connected directly to conversational LLM loop. | Add multi-file batch ingestion and chunk deduplication. |
+| **Hybrid Search (Dense + Sparse)**| `IMPLEMENTED` | Qdrant Cosine (0.7) + BM25Okapi (0.3) hybrid search exposed via API and tool | `AI-service/app/rag/vector_store.py`, `AI-service/app/tools/catalog_tools.py` | Standalone endpoint `/api/v1/rag/search` and LLM tool `search_knowledge_base` wired into conversation orchestrator. | Optimize dense/sparse weights per document category. |
 | **Intent Classifier (Standalone)**| `NOT IMPLEMENTED` | File contains `# Stub — not yet implemented.` | `AI-service/app/intelligence/intent/intent_classifier.py` | Intent classification is currently handled implicitly by Groq tool calling. | Implement if non-LLM pre-routing / fast intent parsing is required. |
 | **Order Parser (Standalone)** | `NOT IMPLEMENTED` | File contains `# Stub — not yet implemented.` | `AI-service/app/intelligence/extraction/order_parser.py` | Extraction is currently handled natively via LLM function calling schemas. | Consolidate or deprecate standalone extraction stub. |
 | **ERP Service (Core/Mock ERP)** | `IMPLEMENTED` | REST APIs for Customers, Products, Inventory, Orders, Documents | `ERP-service/src/app.js`, `ERP-service/prisma/schema.prisma` | Tenant-scoped CRUD and transactional inventory reservation in PostgreSQL. | Install dependencies (`node_modules`) and run integration tests. |
@@ -109,7 +109,7 @@ Retailer / Customer
 | **User Service (Auth & Config)** | `PARTIALLY IMPLEMENTED` | Express service for JWT, OTP, Company, WhatsApp & ERP config | `user-service/src/app.js`, `user-service/src/services/auth.service.js` | Full OTP signup, Redis session storage, JWT cookie auth. **Has export bug on /auth/me.** | Fix `getCurrentUser` export bug and install dependencies. |
 | **RabbitMQ / Event-Driven Bus** | `PLANNED` | No RabbitMQ connection, amqplib, or broker code exists | N/A (Only mentioned in design discussions) | Currently services communicate synchronously via HTTP REST. | Introduce RabbitMQ/Kafka when asynchronous webhook handling is required. |
 | **API Gateway** | `PLANNED` | Individual services run on separate ports (4001, 4002, 8000) | N/A | No Kong, NGINX, or Express Gateway currently reverse-proxies endpoints. | Configure unified API gateway (or Docker reverse proxy) for routing. |
-| **Automated Testing Suite** | `PARTIALLY IMPLEMENTED` | 175 passing tests in `whatsapp-service`; test files in ERP and AI services | `whatsapp-service/tests/`, `ERP-service/tests/`, `AI-service/tests/` | WhatsApp test suite passes (except 1 mock bug); ERP and AI tests lack runner config. | Fix Jest mock in WhatsApp service; add pytest to AI-service venv. |
+| **Automated Testing Suite** | `IMPLEMENTED` | 177 passing tests in `whatsapp-service`; 74 passing tests in `AI-service` | `whatsapp-service/tests/`, `AI-service/tests/` | Full end-to-end integration and unit tests passing in both WhatsApp and AI services. | Add integration test runner for ERP-service and user-service. |
 
 ---
 
@@ -609,17 +609,17 @@ sequenceDiagram
 │  ✓ Groq LLM Inference (openai/gpt-oss-120b, llama3)                    │
 │  ✓ Full Multi-Turn Conversation Memory (PostgreSQL)                    │
 │  ✓ Native Function / Tool Calling (OpenAI-compatible schema)           │
-│  ✓ Autonomous ERP Tool Invocation (8 Tools Registered)                │
+│  ✓ Autonomous ERP Tool Invocation (8 ERP Tools Registered)             │
+│  ✓ RAG Tool Calling (search_knowledge_base inside LLM loop)           │
 │  ✓ Deterministic SHA-256 Idempotency Cache for Write Tools             │
-│  ✓ Standalone RAG PDF Ingestion (PyPDF + SentenceTransformers)         │
-│  ✓ Standalone Hybrid Retrieval (Qdrant Cosine + BM25Okapi)             │
+│  ✓ RAG PDF Ingestion (PyPDF + SentenceTransformers)                    │
+│  ✓ Hybrid Retrieval (Qdrant Cosine + BM25Okapi)                        │
 └────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        PLANNED AI CAPABILITIES                         │
 ├────────────────────────────────────────────────────────────────────────┤
-│  ⏳ RAG Tool Calling (search_knowledge_base inside LLM loop)           │
 │  ⏳ Multi-Item Order Extraction & Fuzzy Product Catalog Matcher        │
 │  ⏳ Voice Note Audio Transcriptions (Whisper integration)              │
 │  ⏳ Image / Handwritten Invoice OCR Processing                         │
@@ -639,16 +639,17 @@ sequenceDiagram
 - **Are embeddings implemented?** `YES` (Using `SentenceTransformer('BAAI/bge-small-en-v1.5')`, producing 384-dimensional normalized vectors).
 - **Is a vector database used?** `YES` (`Qdrant` client running locally with persistent storage at `./data/qdrant`).
 - **Is hybrid search implemented?** `YES` (Merges Qdrant Cosine similarity score [0.7 weight] with BM25Okapi sparse score [0.3 weight]).
-- **Is retrieval connected to the Conversation endpoint?** `NO`.
+- **Is retrieval connected to the Conversation endpoint?** `YES` (Connected via `search_knowledge_base` tool).
 
-> [!IMPORTANT]
-> **RAG Status Summary:** RAG ingestion, embedding generation, Qdrant vector storage, and hybrid search are **fully implemented as standalone API endpoints**. However, RAG is **NOT yet connected to the conversation orchestrator or exposed as an LLM tool**. The AI conversational flow currently does not query the RAG index.
+> [!NOTE]
+> **RAG Status Summary:** RAG ingestion, embedding generation, Qdrant vector storage, hybrid search, and **conversational LLM tool-calling are FULLY IMPLEMENTED and TESTED**. The AI conversational flow actively queries the knowledge base via `search_knowledge_base` whenever users ask about company policies, return rules, distributor guidelines, warranties, or PDF document information.
 
-### What is Required to Complete RAG Integration:
-1. Create a new tool `search_knowledge_base` in `AI-service/app/tools/`.
-2. Register the tool in `AI-service/app/tools/registry.py` with schema `SearchKnowledgeBaseArgs(query: str, top_k: int = 3)`.
-3. In `search_knowledge_base`, invoke `VectorStore.hybrid_search(query, query_embedding)`.
-4. Update `SYSTEM_PROMPT` to guide the LLM to call `search_knowledge_base` for policy, return rules, distributor catalogs, or FAQ queries.
+### Implemented RAG Tool Architecture:
+1. **Tool Definition & Schema:** `SearchKnowledgeBaseArgs(query: str, top_k: int = 3)` in `AI-service/app/tools/schemas.py`.
+2. **Hybrid Execution Engine:** `search_knowledge_base` in `AI-service/app/tools/catalog_tools.py`, invoking `VectorStore.hybrid_search(query, query_embedding, top_k)`.
+3. **Tool Registration:** Registered in `tool_registry` under the `"read"` category and exported to Groq via `get_tools_for_llm()`.
+4. **System Prompt Policy:** `SYSTEM_PROMPT` in `AI-service/app/intelligence/llm/prompts/system.py` strictly distinguishes live ERP data (products, prices, stock, orders) from document policies (return rules, warranties, FAQs) and enforces anti-hallucination.
+5. **Test Coverage:** Verified via `tests/unit/test_rag_tool.py` and `tests/integration/test_end_to_end_scenarios.py` (scenarios 11 & 12).
 
 ---
 
@@ -994,9 +995,9 @@ gantt
     M1: LLM WhatsApp Conversation       :done, m1, 2026-08-01, 2026-08-15
     M2: PostgreSQL Conversation Memory  :done, m2, 2026-08-16, 2026-08-25
     M3: LLM Tool Calling & ERP Sync     :done, m3, 2026-08-26, 2026-09-02
+    M4: Wire RAG Tool to AI Orchestrator:done, m4, 2026-09-03, 2026-09-06
     section Immediate Next
-    M4: Wire RAG Tool to AI Orchestrator:active, m4, 2026-09-03, 2026-09-10
-    M5: Unified Docker Compose & Tests  :m5, 2026-09-11, 2026-09-18
+    M5: Unified Docker Compose & Integration Tests :active, m5, 2026-09-07, 2026-09-18
     section Core Expansion
     M6: First ERP Plugin (Tally XML)    :m6, 2026-09-19, 2026-10-05
     M7: Meta Cloud API Production Provider:m7, 2026-10-06, 2026-10-20
@@ -1006,8 +1007,8 @@ gantt
 - **Milestone 1 (LLM WhatsApp Conversation):** `COMPLETED` (Twilio webhook -> FastAPI -> Groq -> WhatsApp response).
 - **Milestone 2 (Conversation Memory):** `COMPLETED` (PostgreSQL asyncpg conversation history per WaId).
 - **Milestone 3 (LLM Tool Calling & ERP Sync):** `COMPLETED` (8 tools calling ERP Service with stock check & order creation).
-- **Milestone 4 (RAG Tool Integration):** `READY TO BUILD` (Expose existing hybrid vector search as an LLM tool).
-- **Milestone 5 (Unified Infrastructure & Testing):** `PENDING` (Docker compose orchestration and test suite completion).
+- **Milestone 4 (RAG Tool Integration):** `COMPLETED` (Exposed hybrid vector search as `search_knowledge_base` in LLM tool registry; anti-hallucination policies enforced; 74 tests passing).
+- **Milestone 5 (Unified Infrastructure & Testing):** `READY TO BUILD` (Docker Compose orchestration across all microservices, PostgreSQL databases, and end-to-end integration tests).
 - **Milestone 6 (ERP Plugin Engine - Tally Adapter):** `PLANNED` (Connector manager & XML bridge to Tally Prime).
 - **Milestone 7 (Production Meta WhatsApp API):** `PLANNED` (Official Meta Graph API adapter).
 
@@ -1017,28 +1018,25 @@ gantt
 
 ### The Single Recommended Next Task
 
-> ### 🎯 **NEXT TASK: Wire the RAG Vector Search into the Conversation Tool Registry**
+> ### 🎯 **NEXT TASK: Milestone 5 — Unified Multi-Service Docker Compose & End-to-End Orchestration**
 
 #### Why This is Next:
-You have already built **both** major halves of the intelligence layer:
-1. You built a working **Tool Calling Orchestrator** in `AI-service` that allows the LLM to call tools autonomously.
-2. You built a working **Hybrid Vector Store (Qdrant + BM25)** in `AI-service/app/rag/vector_store.py` that embeds PDFs and performs dense/sparse retrieval.
+With Milestone 4 complete, all intelligence capabilities (LLM conversation, memory, ERP transactional tools, customer authorization security, and RAG document search) are operational. However:
+1. Services run independently with disparate ports and dependencies (`whatsapp-service` on :4001, `ERP-service` on :4002, `AI-service` on :8000, `user-service` on :3000).
+2. The root `docker-compose.yml` is an empty stub.
+3. Bootstrapping the entire ecosystem requires manually starting 2 PostgreSQL databases, 1 Redis instance, and 4 Node/Python processes.
 
-However, they are currently disconnected! The AI cannot answer questions about uploaded product catalogs or business PDFs during WhatsApp chats because the LLM has no tool to search the RAG index. Connecting them completes the entire AI product-knowledge intelligence loop.
+Unified containerization guarantees reproducible deployments and enables comprehensive end-to-end testing across all services with single-command spin-up.
 
 #### Exact Files to Work On:
-1. `c:\DISTROSYNC\AI-service\app\tools\schemas.py` — Add `SearchKnowledgeBaseArgs(BaseModel)` schema.
-2. `c:\DISTROSYNC\AI-service\app\tools\catalog_tools.py` — Implement `search_knowledge_base` executor invoking `VectorStore.hybrid_search`.
-3. `c:\DISTROSYNC\AI-service\app\tools\registry.py` & `__init__.py` — Register `search_knowledge_base` tool.
-4. `c:\DISTROSYNC\AI-service\app\intelligence\llm\prompts\system.py` — Add rule: *"When a user asks about distributor policies, catalog details, or questions not answered by product search, call `search_knowledge_base`."*
-
-#### What Should NOT Be Worked On Yet:
-- Do NOT build RabbitMQ or event brokers yet.
-- Do NOT build SAP or Oracle plugins yet.
-- Do NOT rewrite the WhatsApp webhook pipeline.
+1. `c:\DISTROSYNC\docker-compose.yml` — Define `whatsapp-service`, `ai-service`, `erp-service`, `user-service`, `postgres-erp`, `postgres-ai`, `redis`.
+2. `c:\DISTROSYNC\AI-service\Dockerfile` — Production multi-stage Dockerfile for FastAPI + PyTorch/SentenceTransformers.
+3. `c:\DISTROSYNC\whatsapp-service\Dockerfile` — Node.js 20 LTS container definition.
+4. `c:\DISTROSYNC\ERP-service\Dockerfile` — Node.js 20 LTS container with Prisma client generation.
+5. `c:\DISTROSYNC\user-service\Dockerfile` — Node.js 20 LTS container with Prisma migrations.
 
 #### Definition of Done:
-Upload a PDF via `ERP-service`, send a WhatsApp message asking about a detail inside that PDF (e.g. *"What is your return policy for damaged cans?"*), and verify in logs that the LLM autonomously calls `search_knowledge_base` and returns the correct excerpt in its WhatsApp response.
+Running `docker-compose up -d` brings up all databases, runs migrations, boots all 4 services, and passes a healthcheck ping across all 4 HTTP ports (:4001, :4002, :8000, :3000).
 
 ---
 

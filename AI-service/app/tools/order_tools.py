@@ -272,8 +272,9 @@ async def create_order(
     if requested_cust_id:
         is_exact_id = requested_cust_id == auth_cust_id
         is_exact_code = bool(auth_cust_code and (requested_cust_id.lower() == auth_cust_code.lower()))
+        is_exact_name = bool(auth_cust_name and (requested_cust_id.lower() == auth_cust_name.lower()))
 
-        if not is_exact_id and not is_exact_code:
+        if not is_exact_id and not is_exact_code and not is_exact_name:
             logger.warning(
                 "[ORDER] BLOCKED customer mismatch: requested='%s', authorized='%s' (%s)",
                 requested_cust_id,

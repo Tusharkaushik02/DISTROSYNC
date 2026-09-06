@@ -1,3 +1,4 @@
+from app.tools.catalog_tools import search_knowledge_base
 from app.tools.customer_tools import get_customer, search_customers
 from app.tools.inventory_tools import get_inventory
 from app.tools.order_tools import (
@@ -18,6 +19,7 @@ from app.tools.schemas import (
     GetOrderStatusArgs,
     GetProductArgs,
     SearchCustomersArgs,
+    SearchKnowledgeBaseArgs,
     SearchOrdersArgs,
     SearchProductsArgs,
 )
@@ -85,6 +87,14 @@ tool_registry.register(
     description="Check the current status (PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED) of an order by order UUID.",
     args_schema=GetOrderStatusArgs,
     executor=get_order_status,
+    category="read",
+)
+
+tool_registry.register(
+    name="search_knowledge_base",
+    description="Search the company's uploaded documents, policies, catalogs, FAQs, return rules, distributor guidelines, warranties, and knowledge base for relevant information.",
+    args_schema=SearchKnowledgeBaseArgs,
+    executor=search_knowledge_base,
     category="read",
 )
 

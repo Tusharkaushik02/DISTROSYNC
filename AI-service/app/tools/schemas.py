@@ -83,6 +83,11 @@ class CancelOrderArgs(BaseModel):
     order_id: str = Field(..., min_length=1, description="UUID of the order to cancel.")
 
 
+class SearchKnowledgeBaseArgs(BaseModel):
+    query: str = Field(..., min_length=1, description="The information, question, policy, or topic to search for in company documents.")
+    top_k: int = Field(default=3, ge=1, le=10, description="Number of relevant knowledge base passages to retrieve (default: 3, max: 10).")
+
+
 # ── Tool Definition Metadata ─────────────────────────────────────────────
 
 class ToolDefinition(BaseModel):

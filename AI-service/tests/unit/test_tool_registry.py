@@ -25,6 +25,7 @@ class TestToolRegistry:
             "get_order_status",
             "create_order",
             "cancel_order",
+            "search_knowledge_base",
         ]
         for tool_name in expected_tools:
             assert tool_registry.is_registered(tool_name), f"Tool {tool_name} not registered"
