@@ -11,7 +11,16 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
 
+// Health check
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        service: process.env.SERVICE_NAME || 'whatsapp-service'
+    });
+});
+
 // Inbound WhatsApp webhook pipeline
 app.use('/api/v2/whatsapp/webhook', webhookRoutes);
 
 module.exports = app;
+

@@ -1,0 +1,220 @@
+services:
+  # ─── PostgreSQL: ERP Database ───────────────────────────────────────
+  postgres-erp:
+    image: postgres:17
+    container_name: distrosync-postgres-erp
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: distrosync_erp
+    volumes:
+      - erp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d distrosync_erp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - distrosync-network
+
+  # ─── PostgreSQL: AI Conversation Memory Database ────────────────────
+  postgres-ai:
+    image: postgres:17
+    container_name: distrosync-postgres-ai
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: distrosync_ai
+    volumes:
+      - ai_postgres_data:/var/lib/postgresql/data
+      - ./AI-service/prisma/migrations/20260901133000_init/migration.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d distrosync_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - distrosync-network
+
+  # ─── PostgreSQL: User Service Database ──────────────────────────────
+  postgres-user:
+    image: postgres:17
+    container_name: distrosync-postgres-user
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - user_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - distrosync-network
+
+  # ─── Redis: Session & OTP Cache ─────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: distrosync-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - distrosync-network
+
+  # ─── ERP Service (:4002) ────────────────────────────────────────────
+  erp-service:
+    build:
+      context: ./ERP-service
+      dockerfile: Dockerfile
+    container_name: distrosync-erp-service
+    restart: unless-stopped
+    ports:
+      - "${ERP_PORT:-4002}:4002"
+    environment:
+      PORT: 4002
+      NODE_ENV: ${NODE_ENV:-development}
+      SERVICE_NAME: ERP-Service
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-erp:5432/distrosync_erp?schema=public
+      REDIS_URL: redis://redis:6379
+      SERVICE_API_KEY: ${SHARED_SERVICE_API_KEY:-65c47afdd3eff0ebc554035a37dcf700e12c8fd7b634962ebf24126a5c5f08b5}
+      AI_SERVICE_URL: http://ai-service:8000
+      UPLOAD_DIR: ./storage/documents
+    volumes:
+      - erp_documents_data:/app/storage/documents
+    depends_on:
+      postgres-erp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:4002/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - distrosync-network
+
+  # ─── AI Service (:8000) ─────────────────────────────────────────────
+  ai-service:
+    build:
+      context: ./AI-service
+      dockerfile: Dockerfile
+    container_name: distrosync-ai-service
+    restart: unless-stopped
+    ports:
+      - "${AI_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-ai:5432/distrosync_ai
+      CONVERSATION_HISTORY_LIMIT: ${CONVERSATION_HISTORY_LIMIT:-20}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      ERP_SERVICE_URL: http://erp-service:4002
+      ERP_SERVICE_API_KEY: ${SHARED_SERVICE_API_KEY:-65c47afdd3eff0ebc554035a37dcf700e12c8fd7b634962ebf24126a5c5f08b5}
+      QDRANT_PATH: ./data/qdrant
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-small-en-v1.5}
+    volumes:
+      - ./AI-service/data/qdrant:/service/data/qdrant
+      - ai_hf_cache:/service/data/hf_cache
+    depends_on:
+      postgres-ai:
+        condition: service_healthy
+      erp-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - distrosync-network
+
+  # ─── WhatsApp Service (:4001) ───────────────────────────────────────
+  whatsapp-service:
+    build:
+      context: ./whatsapp-service
+      dockerfile: Dockerfile
+    container_name: distrosync-whatsapp-service
+    restart: unless-stopped
+    ports:
+      - "${WHATSAPP_PORT:-4001}:4001"
+    environment:
+      PORT: 4001
+      NODE_ENV: ${NODE_ENV:-development}
+      SERVICE_NAME: whatsapp-service
+      AI_SERVICE_URL: http://ai-service:8000
+      AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-30000}
+      WHATSAPP_TENANT_ID: ${DEFAULT_TENANT_ID:-a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER}
+      TWILIO_WEBHOOK_URL: ${TWILIO_WEBHOOK_URL}
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:4001/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - distrosync-network
+
+  # ─── User Service (:3000) ───────────────────────────────────────────
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: distrosync-user-service
+    restart: unless-stopped
+    ports:
+      - "${USER_PORT:-3000}:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: ${NODE_ENV:-development}
+      SERVICE_NAME: user-service
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-user:5432/postgres?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-distrosync_jwt_access_super_secret_key_32bytes}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-distrosync_jwt_refresh_super_secret_key_32bytes}
+      ACCESS_TOKEN_EXPIRES_IN: ${ACCESS_TOKEN_EXPIRES_IN:-15m}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-7d}
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - distrosync-network
+
+# ─── Volumes ──────────────────────────────────────────────────────────
+volumes:
+  erp_postgres_data:
+  ai_postgres_data:
+  user_postgres_data:
+  redis_data:
+  erp_documents_data:
+  ai_hf_cache:
+
+# ─── Networks ─────────────────────────────────────────────────────────
+networks:
+  distrosync-network:
+    driver: bridge

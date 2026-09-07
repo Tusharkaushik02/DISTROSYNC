@@ -396,5 +396,6 @@ module.exports = {
     verifyOTP,
     login,
     refreshToken,
-    logout
-};
+    logout,
+    getCurrentUser
+};
