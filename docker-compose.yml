@@ -11,7 +11,7 @@ services:
     volumes:
       - erp_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d distrosync_erp"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d distrosync_erp" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -31,7 +31,7 @@ services:
       - ai_postgres_data:/var/lib/postgresql/data
       - ./AI-service/prisma/migrations/20260901133000_init/migration.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d distrosync_ai"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d distrosync_ai" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -50,7 +50,7 @@ services:
     volumes:
       - user_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d postgres" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -66,7 +66,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -97,7 +97,7 @@ services:
       postgres-erp:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:4002/health || exit 1"]
+      test: [ "CMD-SHELL", "wget --spider -q http://localhost:4002/health || exit 1" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -132,7 +132,7 @@ services:
       erp-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -164,7 +164,7 @@ services:
       ai-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:4001/health || exit 1"]
+      test: [ "CMD-SHELL", "wget --spider -q http://localhost:4001/health || exit 1" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -197,7 +197,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/health || exit 1"]
+      test: [ "CMD-SHELL", "wget --spider -q http://localhost:3000/health || exit 1" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -214,7 +214,7 @@ volumes:
   erp_documents_data:
   ai_hf_cache:
 
-# ─── Networks ─────────────────────────────────────────────────────────
+    # ─── Networks ─────────────────────────────────────────────────────────
 networks:
   distrosync-network:
     driver: bridge

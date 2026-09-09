@@ -1,0 +1,52 @@
+#!/bin/sh
+# brain.md SessionStart hook — inject a compact `brain list-pages` snapshot
+# into Claude Code context so a session starts brain-aware.
+#
+# Convenience layer, not a hard dependency: any failure exits 0 with no output.
+# NEVER reads or writes brain markdown files; only shells out to the `brain` CLI.
+#
+# Locates the brain-page skill's CLI from a few likely places.
+# Override by exporting BRAIN_CLI=/abs/path/to/brain-page/bin/brain.mjs.
+set -e
+trap 'exit 0' EXIT
+
+if [ -n "$CLAUDE_PROJECT_DIR" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
+  cd "$CLAUDE_PROJECT_DIR"
+fi
+
+find_cli() {
+  if [ -n "$BRAIN_CLI" ] && [ -f "$BRAIN_CLI" ]; then
+    echo "$BRAIN_CLI"; return 0
+  fi
+  for c in \
+    "skills/brain-page/bin/brain.mjs" \
+    "$HOME/.claude/skills/brain-page/bin/brain.mjs" \
+    "$HOME/.codex/skills/brain-page/bin/brain.mjs" \
+    "$HOME/.config/opencode/skills/brain-page/bin/brain.mjs" \
+    "$HOME/.cursor/skills/brain-page/bin/brain.mjs" \
+    "$HOME/.pi/agent/skills/brain-page/bin/brain.mjs"; do
+    if [ -f "$c" ]; then echo "$c"; return 0; fi
+  done
+  if command -v brain >/dev/null 2>&1; then
+    echo "brain"; return 0
+  fi
+  return 1
+}
+
+cli=$(find_cli)
+
+invoke() {
+  if [ -f "$cli" ]; then
+    node "$cli" "$@"
+  else
+    "$cli" "$@"
+  fi
+}
+
+dir_out=$(invoke brain-dir 2>/dev/null)
+printf '%s\n' "$dir_out" | grep -q '^populated: true$' || exit 0
+
+pages=$(invoke list-pages 2>/dev/null)
+[ -n "$pages" ] || exit 0
+
+printf '%s\n\n%s\n' "Project brain pages (brain list-pages):" "$pages"
