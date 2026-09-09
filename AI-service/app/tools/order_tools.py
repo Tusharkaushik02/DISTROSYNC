@@ -16,6 +16,7 @@ from app.tools.schemas import (
     SearchOrdersArgs,
     SearchProductsArgs,
     ToolResult,
+    UpdateOrderArgs,
 )
 
 logger = logging.getLogger(__name__)
@@ -333,6 +334,8 @@ async def create_order(
         "customerId": customer_id,
         "items": resolved_items,
     }
+    if args.shipping_address:
+        payload["shippingAddress"] = args.shipping_address
 
     order = await erp_client.create_order(
         tenant_id=tenant_id,
@@ -348,11 +351,73 @@ async def create_order(
             "id": order.get("id"),
             "status": order.get("status"),
             "total_amount": order.get("totalAmount"),
+            "shipping_address": order.get("shippingAddress"),
             "customer": order.get("customer"),
             "items": order.get("items", []),
             "created_at": order.get("createdAt"),
         },
     )
+
+
+async def update_order(
+    args: UpdateOrderArgs,
+    tenant_id: str,
+    idempotency_key: str | None = None,
+    **kwargs: Any,
+) -> ToolResult:
+    """Update order details such as shippingAddress without cancelling or recreating."""
+    order_id = args.order_id
+    if not _is_uuid(order_id):
+        result = await search_orders(
+            args=SearchOrdersArgs(query=order_id, limit=settings.SEMANTIC_SEARCH_TOP_K),
+            tenant_id=tenant_id,
+        )
+        match = _single_high_confidence_match(result.data if result.success else None)
+        if not match:
+            return ToolResult.fail(
+                tool_name="update_order",
+                code="ORDER_RESOLUTION_REQUIRED",
+                message="The order reference is ambiguous or could not be resolved. Please provide the order ID or clarify the order.",
+            )
+        order_id = match["id"]
+
+    update_payload: dict[str, Any] = {}
+    if args.shipping_address is not None:
+        update_payload["shippingAddress"] = args.shipping_address
+
+    if not update_payload:
+        return ToolResult.fail(
+            tool_name="update_order",
+            code="NO_FIELDS_TO_UPDATE",
+            message="No valid fields were provided to update.",
+        )
+
+    try:
+        updated = await erp_client.update_order(
+            tenant_id=tenant_id,
+            order_id=order_id,
+            data=update_payload,
+        )
+        print(f"[ORDER] [OK] Order {order_id} updated successfully: {update_payload}")
+        return ToolResult.ok(
+            tool_name="update_order",
+            data={
+                "id": updated.get("id"),
+                "status": updated.get("status"),
+                "total_amount": updated.get("totalAmount"),
+                "shipping_address": updated.get("shippingAddress"),
+                "customer": updated.get("customer"),
+                "items": updated.get("items", []),
+                "updated_at": updated.get("updatedAt"),
+            },
+        )
+    except Exception as exc:
+        logger.error("[OrderTools] Failed to update order %s: %s", order_id, exc)
+        return ToolResult.fail(
+            tool_name="update_order",
+            code="ORDER_UPDATE_FAILED",
+            message=f"Could not update order: {str(exc)}",
+        )
 
 
 async def cancel_order(

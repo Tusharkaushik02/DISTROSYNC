@@ -52,6 +52,8 @@ model Product {
   sku         String
   name        String
   description String?
+  category    String?
+  tags        String[]    @default([])
   unit        String      @default("unit")
   price       Decimal     @db.Decimal(12, 2)
   active      Boolean     @default(true)
@@ -79,15 +81,16 @@ model Inventory {
 }
 
 model Order {
-  id          String      @id @default(uuid()) @db.Uuid
-  tenantId    String      @db.Uuid
-  customerId  String      @db.Uuid
-  customer    Customer    @relation(fields: [customerId], references: [id])
-  status      OrderStatus @default(PENDING)
-  totalAmount Decimal     @db.Decimal(12, 2)
-  items       OrderItem[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id              String      @id @default(uuid()) @db.Uuid
+  tenantId        String      @db.Uuid
+  customerId      String      @db.Uuid
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  status          OrderStatus @default(PENDING)
+  totalAmount     Decimal     @db.Decimal(12, 2)
+  shippingAddress String?     @db.Text
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   @@index([tenantId])
   @@index([customerId])

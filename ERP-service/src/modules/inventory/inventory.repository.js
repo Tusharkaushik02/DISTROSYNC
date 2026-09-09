@@ -47,6 +47,21 @@ class InventoryRepository {
             }
         });
     }
+
+    async releaseStock(productId, tenantId, quantity, tx = prisma) {
+        // Atomic decrement of reserved and increment of available on cancellation
+        return tx.inventory.updateMany({
+            where: {
+                productId,
+                tenantId,
+                reservedQuantity: { gte: quantity }
+            },
+            data: {
+                availableQuantity: { increment: quantity },
+                reservedQuantity: { decrement: quantity }
+            }
+        });
+    }
 }
 
 module.exports = new InventoryRepository();

@@ -96,6 +96,7 @@ class OrderService {
                     customerId: customer.id,
                     status: 'CONFIRMED',
                     totalAmount: totalOrderAmount,
+                    shippingAddress: data.shippingAddress ? data.shippingAddress.trim() : null,
                     items: {
                         create: validatedItems.map(item => ({
                             productId: item.productId,
@@ -134,17 +135,70 @@ class OrderService {
                 await inventoryService.reserve(item.productId, tenantId, item.quantity, tx);
             }
 
-            console.log(`[ERP Order] ✅ Order created ID: ${newOrder.id} | Customer: ${customer.name} | Total: ₹${totalOrderAmount} | Status: CONFIRMED`);
+            console.log(`[ERP Order] ✅ Order created ID: ${newOrder.id} | Customer: ${customer.name} | Total: ₹${totalOrderAmount} | Status: CONFIRMED | Address: ${newOrder.shippingAddress || 'N/A'}`);
             return newOrder;
         });
 
         return this.formatOrder(createdOrder);
     }
 
+    async updateOrder(id, tenantId, data) {
+        const existing = await orderRepository.findById(id, tenantId);
+        if (!existing) {
+            throw new AppError('ORDER_NOT_FOUND', `Order with id ${id} not found`);
+        }
+
+        const modifiableStatuses = ['PENDING', 'CONFIRMED'];
+        if (!modifiableStatuses.includes(existing.status)) {
+            throw new AppError(
+                'ORDER_NOT_MODIFIABLE',
+                `Order cannot be modified in status "${existing.status}". Only PENDING or CONFIRMED orders can be modified.`
+            );
+        }
+
+        const updateData = {};
+        if (data.shippingAddress !== undefined) {
+            updateData.shippingAddress = data.shippingAddress ? data.shippingAddress.trim() : null;
+        }
+
+        const updated = await orderRepository.updateOrder(id, tenantId, updateData);
+        console.log(`[ERP Order] ✏️ Order ${id} updated:`, updateData);
+        return this.formatOrder(updated);
+    }
+
     async updateStatus(id, tenantId, status) {
         const existing = await orderRepository.findById(id, tenantId);
         if (!existing) {
             throw new AppError('ORDER_NOT_FOUND', `Order with id ${id} not found`);
+        }
+
+        if (status === 'CANCELLED') {
+            if (existing.status === 'CANCELLED') {
+                throw new AppError('ORDER_ALREADY_CANCELLED', 'This order has already been cancelled');
+            }
+            const cancellableStatuses = ['PENDING', 'CONFIRMED', 'PROCESSING'];
+            if (!cancellableStatuses.includes(existing.status)) {
+                throw new AppError(
+                    'ORDER_NOT_CANCELLABLE',
+                    `Order cannot be cancelled in status "${existing.status}". Orders that are SHIPPED, OUT_FOR_DELIVERY, or DELIVERED cannot be cancelled.`
+                );
+            }
+
+            // Transactionally update status and release reserved inventory
+            const updated = await prisma.$transaction(async (tx) => {
+                const res = await orderRepository.updateStatus(id, tenantId, status, tx);
+                for (const item of (existing.items || [])) {
+                    await inventoryService.release(item.productId, tenantId, item.quantity, tx);
+                }
+                return res;
+            });
+
+            console.log(`[ERP Order] 🛑 Order ${id} cancelled and inventory released: ${existing.status} -> CANCELLED`);
+            return {
+                orderId: updated.id,
+                status: updated.status,
+                updatedAt: updated.updatedAt
+            };
         }
 
         const updated = await orderRepository.updateStatus(id, tenantId, status);
@@ -162,6 +216,7 @@ class OrderService {
             tenantId: order.tenantId,
             status: order.status,
             totalAmount: Number(order.totalAmount),
+            shippingAddress: order.shippingAddress || null,
             customer: order.customer ? {
                 id: order.customer.id,
                 name: order.customer.name,

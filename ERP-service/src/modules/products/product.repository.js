@@ -49,11 +49,15 @@ class ProductRepository {
         const tokenConditions = searchTokens.flatMap(token => [
             { name: { contains: token, mode: 'insensitive' } },
             { sku: { contains: token, mode: 'insensitive' } },
-            { description: { contains: token, mode: 'insensitive' } }
+            { description: { contains: token, mode: 'insensitive' } },
+            { category: { contains: token, mode: 'insensitive' } },
+            { tags: { has: token } }
         ]);
 
         const exactConditions = [
-            { sku: { equals: cleanQuery, mode: 'insensitive' } }
+            { sku: { equals: cleanQuery, mode: 'insensitive' } },
+            { category: { equals: cleanQuery, mode: 'insensitive' } },
+            { tags: { has: cleanQuery.toLowerCase() } }
         ];
         if (isValidUuid(cleanQuery)) {
             exactConditions.push({ id: cleanQuery });
@@ -66,6 +70,7 @@ class ProductRepository {
                 { name: { contains: cleanQuery, mode: 'insensitive' } },
                 { sku: { contains: cleanQuery, mode: 'insensitive' } },
                 { description: { contains: cleanQuery, mode: 'insensitive' } },
+                { category: { contains: cleanQuery, mode: 'insensitive' } },
                 ...exactConditions,
                 ...tokenConditions
             ]

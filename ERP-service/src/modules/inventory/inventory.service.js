@@ -38,6 +38,12 @@ class InventoryService {
         }
         return true;
     }
+
+    async release(productId, tenantId, quantity, tx) {
+        await inventoryRepository.releaseStock(productId, tenantId, quantity, tx);
+        console.log(`[ERP Inventory] 🔄 Released ${quantity} reserved units for product ${productId}`);
+        return true;
+    }
 }
 
 module.exports = new InventoryService();

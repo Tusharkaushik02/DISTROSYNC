@@ -7,7 +7,14 @@ const orderItemInputSchema = z.object({
 
 const createOrderSchema = z.object({
     customerId: z.string().uuid('customerId must be a valid UUID'),
+    shippingAddress: z.string().max(1000).optional().nullable(),
     items: z.array(orderItemInputSchema).min(1, 'Order must contain at least one item')
+});
+
+const updateOrderSchema = z.object({
+    shippingAddress: z.string().min(1, 'shippingAddress cannot be empty').max(1000).optional()
+}).refine(data => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided to update'
 });
 
 const getOrderByIdSchema = z.object({
@@ -36,6 +43,7 @@ const searchOrderSchema = z.object({
 
 module.exports = {
     createOrderSchema,
+    updateOrderSchema,
     getOrderByIdSchema,
     updateOrderStatusSchema,
     searchOrderSchema

@@ -14,4 +14,5 @@ RUN mkdir -p storage/documents
 
 EXPOSE 4002
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node index.js"]
+CMD ["sh", "-c", "npx prisma db push && node seed_catalog.js && node index.js"]
+

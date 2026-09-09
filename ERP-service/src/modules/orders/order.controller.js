@@ -1,5 +1,5 @@
 const orderService = require('./order.service');
-const { createOrderSchema, getOrderByIdSchema, updateOrderStatusSchema, searchOrderSchema } = require('./order.schema');
+const { createOrderSchema, updateOrderSchema, getOrderByIdSchema, updateOrderStatusSchema, searchOrderSchema } = require('./order.schema');
 const { successResponse } = require('../../shared/utils/response');
 
 class OrderController {
@@ -38,6 +38,17 @@ class OrderController {
             const validatedData = createOrderSchema.parse(req.body);
             const order = await orderService.createOrder(validatedData, req.tenantId);
             return successResponse(res, order, 'Order created successfully', 201);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async update(req, res, next) {
+        try {
+            const { id } = getOrderByIdSchema.parse(req.params);
+            const validatedData = updateOrderSchema.parse(req.body);
+            const updated = await orderService.updateOrder(id, req.tenantId, validatedData);
+            return successResponse(res, updated, 'Order updated successfully');
         } catch (error) {
             next(error);
         }

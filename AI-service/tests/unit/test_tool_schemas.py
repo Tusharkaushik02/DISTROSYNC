@@ -12,6 +12,7 @@ from app.tools.schemas import (
     GetProductArgs,
     SearchProductsArgs,
     ToolResult,
+    UpdateOrderArgs,
 )
 
 
@@ -82,6 +83,11 @@ class TestToolSchemas:
     def test_cancel_order_args_valid(self):
         args = CancelOrderArgs(order_id="order-uuid-123")
         assert args.order_id == "order-uuid-123"
+
+    def test_update_order_args_valid(self):
+        args = UpdateOrderArgs(order_id="order-uuid-123", shipping_address="123 Main St")
+        assert args.order_id == "order-uuid-123"
+        assert args.shipping_address == "123 Main St"
 
     def test_tool_result_helpers(self):
         ok = ToolResult.ok("search_products", {"items": [1, 2]})

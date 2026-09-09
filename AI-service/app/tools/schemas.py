@@ -76,7 +76,13 @@ class CreateOrderItemInput(BaseModel):
 
 class CreateOrderArgs(BaseModel):
     customer_id: str | None = Field(default=None, description="Optional customer ID. The backend automatically binds the order to the authenticated WhatsApp customer.")
+    shipping_address: str | None = Field(default=None, description="Optional shipping or delivery address for the order.")
     items: list[CreateOrderItemInput] = Field(..., min_length=1, description="List of items to order with product_id and quantity.")
+
+
+class UpdateOrderArgs(BaseModel):
+    order_id: str = Field(..., min_length=1, description="UUID or identifier of the order to update.")
+    shipping_address: str | None = Field(default=None, description="New delivery or shipping address for the order.")
 
 
 class CancelOrderArgs(BaseModel):
