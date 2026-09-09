@@ -13,5 +13,6 @@ router.get('/search', orderController.search.bind(orderController));
 router.get('/:id/status', orderController.getStatus.bind(orderController));
 router.get('/:id', orderController.getById.bind(orderController));
 router.patch('/:id/status', orderController.updateStatus.bind(orderController));
+router.patch('/:id', orderController.update.bind(orderController));
 
 module.exports = router;

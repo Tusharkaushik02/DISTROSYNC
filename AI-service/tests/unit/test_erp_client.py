@@ -71,6 +71,35 @@ class TestERPClient:
             assert inv["reservedQuantity"] == 5
 
     @pytest.mark.asyncio
+    async def test_update_order_success(self):
+        mock_response = httpx.Response(
+            status_code=200,
+            json={
+                "success": True,
+                "data": {
+                    "id": "order-1",
+                    "status": "CONFIRMED",
+                    "shippingAddress": "456 Test Ave",
+                },
+            },
+            request=httpx.Request("PATCH", "http://mock-erp:4002/api/v1/orders/order-1"),
+        )
+
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = mock_response
+
+            updated = await self.client.update_order(
+                tenant_id="tenant-uuid-1",
+                order_id="order-1",
+                data={"shippingAddress": "456 Test Ave"},
+            )
+
+            assert updated["id"] == "order-1"
+            assert updated["shippingAddress"] == "456 Test Ave"
+            call_kwargs = mock_req.call_args[1]
+            assert call_kwargs["json"] == {"shippingAddress": "456 Test Ave"}
+
+    @pytest.mark.asyncio
     async def test_erp_error_raises_custom_exception(self):
         mock_response = httpx.Response(
             status_code=400,

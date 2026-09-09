@@ -75,6 +75,38 @@ class OrderRepository {
         });
     }
 
+    async updateOrder(id, tenantId, data, tx = prisma) {
+        return tx.order.update({
+            where: {
+                id,
+                tenantId
+            },
+            data,
+            include: {
+                customer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        externalId: true
+                    }
+                },
+                items: {
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                sku: true,
+                                name: true,
+                                unit: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     async updateStatus(id, tenantId, status, tx = prisma) {
         return tx.order.update({
             where: {

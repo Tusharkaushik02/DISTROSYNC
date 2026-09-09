@@ -40,6 +40,8 @@ class ProductService {
                 sku: cleanSku,
                 name: cleanName,
                 description: data.description ? data.description.trim() : null,
+                category: data.category ? data.category.trim() : null,
+                tags: Array.isArray(data.tags) ? data.tags.map(t => t.trim().toLowerCase()) : [],
                 unit: data.unit || 'unit',
                 price: data.price,
                 active: data.active !== undefined ? data.active : true
@@ -70,6 +72,8 @@ class ProductService {
             sku: product.sku,
             name: product.name,
             description: product.description,
+            category: product.category || null,
+            tags: product.tags || [],
             unit: product.unit,
             price: Number(product.price),
             active: product.active,

@@ -21,6 +21,9 @@ const ErrorCodes = {
     INVALID_QUANTITY: { status: 400, message: 'Quantity must be a positive integer greater than 0' },
     EMPTY_ORDER_ITEMS: { status: 400, message: 'Order must contain at least one item' },
     INVALID_ORDER_STATUS: { status: 400, message: 'Invalid order status transition' },
+    ORDER_NOT_MODIFIABLE: { status: 400, message: 'Order cannot be modified in its current status' },
+    ORDER_ALREADY_CANCELLED: { status: 400, message: 'This order has already been cancelled' },
+    ORDER_NOT_CANCELLABLE: { status: 400, message: 'Order cannot be cancelled in its current status' },
 
     // Document errors
     DOCUMENT_NOT_FOUND: { status: 404, message: 'Document not found' },

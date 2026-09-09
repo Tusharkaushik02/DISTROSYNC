@@ -237,4 +237,113 @@ describe('Order Service Unit Tests', () => {
                 });
         });
     });
+
+    describe('updateOrder', () => {
+        it('should update shippingAddress for a CONFIRMED order', async () => {
+            orderRepository.findById.mockResolvedValue(mockOrder);
+            orderRepository.updateOrder.mockResolvedValue({
+                ...mockOrder,
+                shippingAddress: '456 New Market Rd, Shop 12'
+            });
+
+            const result = await orderService.updateOrder(
+                mockOrderId,
+                mockTenantA,
+                { shippingAddress: '456 New Market Rd, Shop 12' }
+            );
+
+            expect(orderRepository.findById).toHaveBeenCalledWith(mockOrderId, mockTenantA);
+            expect(orderRepository.updateOrder).toHaveBeenCalledWith(
+                mockOrderId,
+                mockTenantA,
+                { shippingAddress: '456 New Market Rd, Shop 12' }
+            );
+            expect(result.shippingAddress).toBe('456 New Market Rd, Shop 12');
+        });
+
+        it('should reject modification if order is SHIPPED', async () => {
+            orderRepository.findById.mockResolvedValue({
+                ...mockOrder,
+                status: 'SHIPPED'
+            });
+
+            await expect(orderService.updateOrder(mockOrderId, mockTenantA, { shippingAddress: 'New Addr' }))
+                .rejects
+                .toMatchObject({
+                    code: 'ORDER_NOT_MODIFIABLE',
+                    statusCode: 400
+                });
+        });
+
+        it('should reject modification if order is DELIVERED', async () => {
+            orderRepository.findById.mockResolvedValue({
+                ...mockOrder,
+                status: 'DELIVERED'
+            });
+
+            await expect(orderService.updateOrder(mockOrderId, mockTenantA, { shippingAddress: 'New Addr' }))
+                .rejects
+                .toMatchObject({
+                    code: 'ORDER_NOT_MODIFIABLE',
+                    statusCode: 400
+                });
+        });
+
+        it('should throw ORDER_NOT_FOUND when updating non-existent order', async () => {
+            orderRepository.findById.mockResolvedValue(null);
+
+            await expect(orderService.updateOrder('unknown-id', mockTenantA, { shippingAddress: 'New Addr' }))
+                .rejects
+                .toMatchObject({
+                    code: 'ORDER_NOT_FOUND',
+                    statusCode: 404
+                });
+        });
+    });
+
+    describe('updateStatus', () => {
+        it('should cancel CONFIRMED order and release reserved inventory', async () => {
+            orderRepository.findById.mockResolvedValue(mockOrder);
+            orderRepository.updateStatus.mockResolvedValue({
+                ...mockOrder,
+                status: 'CANCELLED',
+                updatedAt: new Date()
+            });
+            inventoryService.release.mockResolvedValue(true);
+
+            const result = await orderService.updateStatus(mockOrderId, mockTenantA, 'CANCELLED');
+
+            expect(orderRepository.findById).toHaveBeenCalledWith(mockOrderId, mockTenantA);
+            expect(inventoryService.release).toHaveBeenCalledWith(mockProductId, mockTenantA, 2, expect.anything());
+            expect(result.status).toBe('CANCELLED');
+        });
+
+        it('should reject cancellation if order is already CANCELLED', async () => {
+            orderRepository.findById.mockResolvedValue({
+                ...mockOrder,
+                status: 'CANCELLED'
+            });
+
+            await expect(orderService.updateStatus(mockOrderId, mockTenantA, 'CANCELLED'))
+                .rejects
+                .toMatchObject({
+                    code: 'ORDER_ALREADY_CANCELLED',
+                    statusCode: 400
+                });
+        });
+
+        it('should reject cancellation if order is DELIVERED', async () => {
+            orderRepository.findById.mockResolvedValue({
+                ...mockOrder,
+                status: 'DELIVERED'
+            });
+
+            await expect(orderService.updateStatus(mockOrderId, mockTenantA, 'CANCELLED'))
+                .rejects
+                .toMatchObject({
+                    code: 'ORDER_NOT_CANCELLABLE',
+                    statusCode: 400
+                });
+        });
+    });
 });

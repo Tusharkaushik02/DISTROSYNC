@@ -7,6 +7,7 @@ from app.tools.order_tools import (
     get_order,
     get_order_status,
     search_orders,
+    update_order,
 )
 from app.tools.product_tools import get_product, search_products
 from app.tools.registry import tool_registry
@@ -22,6 +23,7 @@ from app.tools.schemas import (
     SearchKnowledgeBaseArgs,
     SearchOrdersArgs,
     SearchProductsArgs,
+    UpdateOrderArgs,
 )
 
 # ── Register Read Tools ──────────────────────────────────────────────────
@@ -102,15 +104,23 @@ tool_registry.register(
 
 tool_registry.register(
     name="create_order",
-    description="Place an order for a customer with a list of items (product_id and quantity). Reserves inventory atomically in the ERP.",
+    description="Place an order for a customer with a list of items (product_id and quantity) and optional shipping_address. Reserves inventory atomically in the ERP.",
     args_schema=CreateOrderArgs,
     executor=create_order,
     category="write",
 )
 
 tool_registry.register(
+    name="update_order",
+    description="Update mutable attributes of an existing order (such as shipping_address) without cancelling or recreating the order. Only PENDING or CONFIRMED orders can be modified.",
+    args_schema=UpdateOrderArgs,
+    executor=update_order,
+    category="write",
+)
+
+tool_registry.register(
     name="cancel_order",
-    description="Cancel an existing order by order UUID.",
+    description="Cancel an existing order by order UUID. Only use when customer explicitly requests cancellation. Does NOT modify addresses or orders.",
     args_schema=CancelOrderArgs,
     executor=cancel_order,
     category="write",

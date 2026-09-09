@@ -239,6 +239,15 @@ class ERPClient:
             idempotency_key=idempotency_key,
         )
 
+    async def update_order(self, tenant_id: str, order_id: str, data: dict) -> dict:
+        """Update an order (e.g. shippingAddress)."""
+        return await self._request(
+            "PATCH",
+            f"/api/v1/orders/{order_id}",
+            tenant_id,
+            json_data=data,
+        )
+
     async def update_order_status(self, tenant_id: str, order_id: str, status: str) -> dict:
         """Update order status (e.g. CANCELLED)."""
         return await self._request(

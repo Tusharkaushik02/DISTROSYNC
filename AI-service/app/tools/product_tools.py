@@ -2,10 +2,72 @@ import logging
 from typing import Any
 
 from app.clients.erp_client import erp_client
+from app.core.config import settings
 from app.search.semantic_search_service import semantic_search_service
 from app.tools.schemas import GetProductArgs, SearchProductsArgs, ToolResult
 
 logger = logging.getLogger(__name__)
+
+SYNONYM_MAP: dict[str, list[str]] = {
+    "cold drink": ["cola", "juice", "beverage", "soda", "drink"],
+    "cold drinks": ["cola", "juice", "beverage", "soda", "drinks"],
+    "soft drink": ["cola", "soda", "beverage"],
+    "soft drinks": ["cola", "soda", "beverages"],
+    "beverage": ["cola", "juice", "drink"],
+    "beverages": ["cola", "juice", "drinks"],
+    "snack": ["biscuits", "cookies"],
+    "snacks": ["biscuits", "cookies"],
+    "biscuit": ["biscuits", "cookies"],
+    "biscuits": ["cookies", "biscuits"],
+    "soap": ["bath soap", "soap"],
+    "detergent": ["liquid detergent", "detergent", "washing"],
+}
+
+
+async def _expand_search_query(query: str) -> list[str]:
+    """Expand conceptual/conversational product search query using synonyms or LLM."""
+    expansions: list[str] = []
+    clean_q = query.lower().strip()
+    for key, syns in SYNONYM_MAP.items():
+        if key in clean_q:
+            expansions.extend(syns)
+
+    # If LLM is available, try conceptual query expansion
+    if settings.GROQ_API_KEY:
+        try:
+            from app.intelligence.llm.client import LLMClient
+            client = LLMClient()
+            prompt = (
+                f"Given the product search query: '{query}', provide 3 to 5 common product categories, "
+                f"synonyms, or specific item types that a distributor or retail catalog might contain. "
+                f"Respond with ONLY a comma-separated list of short terms (e.g. cola, juice, soda)."
+            )
+            resp = client.generate_response(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=60,
+                temperature=0.0,
+            )
+            if resp.content:
+                terms = [t.strip().lower() for t in resp.content.split(",") if t.strip()]
+                for t in terms:
+                    if t not in expansions and len(t) > 1:
+                        expansions.append(t)
+        except Exception as exc:
+            logger.debug("[ProductTools] LLM query expansion failed: %s", exc)
+
+    return list(dict.fromkeys(expansions))
+
+
+def _prepare_candidate(p: dict[str, Any]) -> dict[str, Any]:
+    tags_list = p.get("tags") or []
+    tags_text = " ".join(tags_list) if isinstance(tags_list, list) else str(tags_list)
+    category = p.get("category") or ""
+    return {
+        **p,
+        "category": category,
+        "tags_text": tags_text,
+        "search_text": f"{p.get('name', '')} {category} {tags_text} {p.get('description', '')}".strip(),
+    }
 
 
 async def search_products(
@@ -17,10 +79,7 @@ async def search_products(
     """Search products in ERP using multi-stage semantic entity resolution."""
     candidates_by_id: dict[str, dict[str, Any]] = {}
 
-    # 1. Fetch the authoritative candidate pool from ERP. The ERP search is
-    # intentionally the first call so identifiers are resolved without a
-    # semantic pass. Search errors are surfaced; an empty result may use the
-    # catalog list as a fuzzy-search fallback.
+    # 1. Fetch the authoritative candidate pool from ERP.
     searched = await erp_client.search_products(
         tenant_id=tenant_id,
         query=args.query,
@@ -28,15 +87,27 @@ async def search_products(
     )
     for p in (searched or []):
         if p.get("id"):
-            candidates_by_id[p["id"]] = p
+            candidates_by_id[p["id"]] = _prepare_candidate(p)
 
-    # If search_products returned no candidates and query might be fuzzy, try listing catalog
+    # If ERP search returned few or no candidates, expand query with synonyms/categories
+    if len(candidates_by_id) == 0:
+        expanded_terms = await _expand_search_query(args.query)
+        for term in expanded_terms[:3]:
+            try:
+                exp_results = await erp_client.search_products(tenant_id=tenant_id, query=term, limit=args.limit)
+                for p in (exp_results or []):
+                    if p.get("id"):
+                        candidates_by_id[p["id"]] = _prepare_candidate(p)
+            except Exception as exc:
+                logger.debug("[ProductTools] Expanded search error for '%s': %s", term, exc)
+
+    # If still no candidates, fallback to listing catalog
     if not candidates_by_id:
         try:
             listed = await erp_client.list_products(tenant_id=tenant_id, limit=100)
             for p in (listed or []):
                 if p.get("id"):
-                    candidates_by_id[p["id"]] = p
+                    candidates_by_id[p["id"]] = _prepare_candidate(p)
         except Exception as exc:
             logger.debug("[ProductTools] list_products error: %s", exc)
 
@@ -49,7 +120,7 @@ async def search_products(
         entity_type="product",
         limit=args.limit,
         exact_match_fields=["id", "sku"],
-        text_fields=["name", "sku"],
+        text_fields=["name", "sku", "category", "tags_text", "search_text"],
         description_field="description",
     )
 
