@@ -1,6 +1,6 @@
 # Brain Index
 
-_Auto-generated. Last updated 2026-09-09T14:17:43.617Z._
+_Auto-generated. Last updated 2026-09-10T14:26:28.632Z._
 
 - [canonical-event-model](pages/canonical-event-model.md) — category: decision | tags: [architecture, whatsapp, messaging] | Inbound WhatsApp payloads differ significantly between providers (Twilio URL-encoded form, Meta Cloud API JSON, 360dialog JSON).
 - [erp-plugin-architecture](pages/erp-plugin-architecture.md) — category: concept | tags: [erp, plugins, architecture, planned] | The ERP Plugin layer is the mechanism by which DISTROSYNC's normalized order data is synced into a customer's actual on-premise or cloud ERP

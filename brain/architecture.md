@@ -2,7 +2,7 @@
 slug: architecture
 title: System architecture
 role: system architecture
-updated: "2026-09-09T19:33:36"
+updated: "2026-09-09T20:19:13"
 ---
 
 # System architecture
@@ -20,8 +20,13 @@ graph TD
     subgraph Services["Backend Microservices"]
         WA["whatsapp-service<br/>Node.js Express :4001"]
         AI["AI-service<br/>FastAPI Python :8000"]
-        ERP["ERP-service<br/>Node.js Express :4002"]
+        ERP["ERP-service<br/>Node.js Express :4002<br/>WebSocket Gateway /ws/connector"]
         User["user-service<br/>Node.js Express :3000"]
+    end
+
+    subgraph OnPremise["On-Premise / Distributor Machine"]
+        Connector["DistroSync Tally Connector<br/>Local Node/Exe Daemon :9123"]
+        Tally["TallyPrime / Tally.ERP 9<br/>HTTP XML Server :9000"]
     end
 
     subgraph Data["Persistence Layer"]
@@ -43,6 +48,9 @@ graph TD
     User <--> PG_User
     User <--> Redis
     WA -->|Send Reply| Twilio
+
+    Connector -->|Outbound WebSocket /ws/connector| ERP
+    Connector <-->|HTTP XML POST :9000| Tally
 `
 
 ## Service Responsibilities
@@ -51,15 +59,17 @@ graph TD
 |---------|---------------------|------|----------------|
 | **whatsapp-service** | Node.js / Express | :4001 | Twilio webhook ingestion, signature verification, payload normalization to CanonicalEvent, outbound messaging |
 | **AI-service** | Python / FastAPI | :8000 | Conversation orchestration, Groq LLM multi-turn tool calling (up to 6 iterations), conversation memory (PostgreSQL asyncpg), RAG hybrid search (Qdrant + BM25) |
-| **ERP-service** | Node.js / Express | :4002 | Tenant-scoped CRUD for Customers, Products, Inventory, Orders, Documents; transactional inventory reservation via Prisma |
+| **ERP-service** | Node.js / Express | :4002 | Tenant-scoped CRUD for Customers, Products, Inventory, Orders, Documents; WebSocket connector gateway (/ws/connector) for on-premise ERP agents |
 | **user-service** | Node.js / Express | :3000 | OTP signup, JWT cookie auth, Redis session storage, Company/WhatsApp/ERP configuration management |
+| **connector** | Node.js / Pkg Standalone | :9123 | On-premise agent bridging TallyPrime XML HTTP server (:9000) with ERP-service via outbound WebSocket |
 
 ## Key Architectural Tenets
 
 1. **Zero ERP Coupling in AI Core** ? The LLM operates against normalized domain tools (search_products, get_inventory, create_order). It never generates ERP-specific XML, SQL, or vendor API calls.
 2. **Provider-Agnostic Messaging** ? Inbound payloads are normalized into a CanonicalEvent model. Switching from Twilio Sandbox to Meta Cloud API requires only a new boundary adapter.
-3. **Multi-Tenant Data Isolation** ? Business entities are partitioned by 	enantId (Company UUID), enforced through HTTP middleware, repository query boundaries, and LLM tool execution contexts.
-4. **Synchronous HTTP REST (Current Phase)** ? Services communicate via direct HTTP. Asynchronous message broker (RabbitMQ/Kafka) is planned for production scale.
+3. **Multi-Tenant Data Isolation** ? Business entities are partitioned by tenantId (Company UUID), enforced through HTTP middleware, repository query boundaries, and LLM tool execution contexts.
+4. **NAT-Traversing On-Premise Connector** ? Outbound WebSocket allows on-premise connectors behind NAT/firewalls to connect to DISTROSYNC cloud without requiring public IPs or firewall port-forwarding.
+5. **Synchronous HTTP REST (Current Phase)** ? Services communicate via direct HTTP. Asynchronous message broker (RabbitMQ/Kafka) is planned for production scale.
 
 ## Database Isolation
 
