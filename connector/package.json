@@ -1,0 +1,43 @@
+{
+  "name": "distrosync-tally-connector",
+  "version": "1.0.0",
+  "description": "DistroSync Tally Connector - High-performance bridge between TallyPrime on-premise and DistroSync Cloud",
+  "main": "src/index.js",
+  "bin": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "bundle": "node build.js bundle",
+    "build:exe": "node build.js package",
+    "build": "npm run bundle && npm run build:exe"
+  },
+  "pkg": {
+    "scripts": "dist/bundle.js",
+    "assets": [
+      "src/ui/public/**/*"
+    ],
+    "targets": [
+      "node20-win-x64"
+    ],
+    "outputPath": "dist"
+  },
+  "keywords": [
+    "tally",
+    "tallyprime",
+    "connector",
+    "distrosync",
+    "erp"
+  ],
+  "author": "DistroSync Team",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ws": "^8.18.0",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^5.14.0",
+    "esbuild": "^0.24.2"
+  }
+}

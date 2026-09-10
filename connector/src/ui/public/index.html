@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DistroSync Tally Connector</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text: #f9fafb;
+      --text-dim: #9ca3af;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at top right, #1e1b4b, #0b0f19 80%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 540px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #374151;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    p.subtitle {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .status-card {
+      background: #1f2937;
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .status-title {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .status-value {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6b7280;
+    }
+    .dot.green { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .dot.red { background: var(--error); }
+    .dot.yellow { background: var(--warning); }
+
+    .form-group {
+      margin-top: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #d1d5db;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: #ffffff;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+    }
+
+    button {
+      width: 100%;
+      margin-top: 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    button.secondary {
+      background: #374151;
+      margin-top: 8px;
+    }
+    button.secondary:hover {
+      background: #4b5563;
+    }
+
+    .message {
+      margin-top: 14px;
+      font-size: 13px;
+      padding: 10px;
+      border-radius: 6px;
+      display: none;
+    }
+    .message.success { background: #064e3b; color: #6ee7b7; display: block; }
+    .message.error { background: #7f1d1d; color: #fca5a5; display: block; }
+
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h1>DistroSync Tally Connector</h1>
+          <span class="badge">v1.0</span>
+        </div>
+        <p class="subtitle">Real-time local sync agent for TallyPrime</p>
+      </div>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-card">
+        <span class="status-title">Cloud Connection</span>
+        <span class="status-value" id="cloud-status">
+          <span class="dot" id="cloud-dot"></span> <span id="cloud-text">Checking...</span>
+        </span>
+      </div>
+      <div class="status-card">
+        <span class="status-title">TallyPrime (:9000)</span>
+        <span class="status-value" id="tally-status">
+          <span class="dot" id="tally-dot"></span> <span id="tally-text">Checking...</span>
+        </span>
+      </div>
+    </div>
+
+    <div id="company-box" style="margin-bottom: 16px; font-size: 13px; color: #9ca3af; display: none;">
+      Active Tally Company: <strong id="company-name" style="color: #fff;">None</strong>
+    </div>
+
+    <!-- Pairing Form (shown if unpaired) -->
+    <div id="pairing-section">
+      <div class="form-group">
+        <label for="pairing-code">Pairing Code</label>
+        <input type="text" id="pairing-code" placeholder="e.g. DS-84A29B" maxlength="12" autocomplete="off" />
+      </div>
+      <button id="pair-btn" onclick="pairConnector()">Pair Connector</button>
+    </div>
+
+    <!-- Paired Info Section (shown if paired) -->
+    <div id="paired-section" style="display: none;">
+      <div style="background: #064e3b; color: #a7f3d0; padding: 14px; border-radius: 8px; margin-bottom: 12px; font-size: 14px;">
+        ✓ Connector is paired and running in background. You may minimize or close this browser tab.
+      </div>
+      <button class="secondary" onclick="testTally()">Test Tally Connection</button>
+      <button class="secondary" style="color: #f87171;" onclick="unpairConnector()">Unpair / Reset</button>
+    </div>
+
+    <div id="msg" class="message"></div>
+
+    <div class="footer">
+      DistroSync &bull; Outbound WebSocket Agent &bull; Auto-reconnect enabled
+    </div>
+  </div>
+
+  <script>
+    async function updateStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        // Cloud status
+        const cloudDot = document.getElementById('cloud-dot');
+        const cloudText = document.getElementById('cloud-text');
+        cloudDot.className = 'dot ' + (data.cloudStatus === 'CONNECTED' ? 'green' : (data.cloudStatus === 'CONNECTING' ? 'yellow' : 'red'));
+        cloudText.textContent = data.cloudStatus;
+
+        // Tally status
+        const tallyDot = document.getElementById('tally-dot');
+        const tallyText = document.getElementById('tally-text');
+        tallyDot.className = 'dot ' + (data.tallyOnline ? 'green' : 'red');
+        tallyText.textContent = data.tallyOnline ? 'ONLINE' : 'OFFLINE';
+
+        // Company
+        const companyBox = document.getElementById('company-box');
+        const companyName = document.getElementById('company-name');
+        if (data.tallyCompany) {
+          companyBox.style.display = 'block';
+          companyName.textContent = data.tallyCompany;
+        }
+
+        // Section toggle
+        if (data.paired) {
+          document.getElementById('pairing-section').style.display = 'none';
+          document.getElementById('paired-section').style.display = 'block';
+        } else {
+          document.getElementById('pairing-section').style.display = 'block';
+          document.getElementById('paired-section').style.display = 'none';
+        }
+      } catch (err) {
+        console.error('Status fetch failed', err);
+      }
+    }
+
+    async function pairConnector() {
+      const code = document.getElementById('pairing-code').value.trim();
+      const btn = document.getElementById('pair-btn');
+      const msg = document.getElementById('msg');
+      if (!code) {
+        msg.className = 'message error';
+        msg.textContent = 'Please enter a pairing code.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Pairing...';
+      msg.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/pair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pairingCode: code })
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          msg.className = 'message success';
+          msg.textContent = 'Pairing successful! Connecting to DistroSync cloud...';
+          updateStatus();
+        } else {
+          msg.className = 'message error';
+          msg.textContent = result.message || 'Pairing failed. Check code and try again.';
+        }
+      } catch (err) {
+        msg.className = 'message error';
+        msg.textContent = 'Connection error: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Pair Connector';
+      }
+    }
+
+    async function testTally() {
+      const msg = document.getElementById('msg');
+      msg.className = 'message success';
+      msg.textContent = 'Testing Tally on port 9000...';
+      try {
+        const res = await fetch('/api/test-tally', { method: 'POST' });
+        const result = await res.json();
+        if (result.online) {
+          msg.className = 'message success';
+          msg.textContent = `Tally is ONLINE! Active Company: ${result.companyName || 'None'}`;
+        } else {
+          msg.className = 'message error';
+          msg.textContent = `Tally test failed: ${result.error || 'Connection refused'}`;
+        }
+        updateStatus();
+      } catch (err) {
+        msg.className = 'message error';
+        msg.textContent = 'Error testing Tally: ' + err.message;
+      }
+    }
+
+    async function unpairConnector() {
+      if (confirm('Are you sure you want to unpair this connector?')) {
+        await fetch('/api/unpair', { method: 'POST' });
+        updateStatus();
+      }
+    }
+
+    // Poll status every 3 seconds
+    setInterval(updateStatus, 3000);
+    updateStatus();
+  </script>
+</body>
+</html>
