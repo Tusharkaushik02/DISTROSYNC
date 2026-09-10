@@ -28,6 +28,7 @@
     "pdf-parse": "^1.1.1",
     "prisma": "^6.19.3",
     "uuid": "^11.1.0",
+    "ws": "^8.21.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

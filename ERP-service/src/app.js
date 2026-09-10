@@ -11,6 +11,7 @@ const productRoutes = require('./modules/products/product.routes');
 const inventoryRoutes = require('./modules/inventory/inventory.routes');
 const orderRoutes = require('./modules/orders/order.routes');
 const documentRoutes = require('./modules/documents/document.routes');
+const connectorRoutes = require('./modules/connector/connector.routes');
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/documents', documentRoutes);
+app.use('/api/v1/connector', connectorRoutes);
 
 // ─── 404 Handler ───────────────────────────────────────────────────
 app.use((req, res) => {

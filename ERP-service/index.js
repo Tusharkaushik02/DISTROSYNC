@@ -1,11 +1,15 @@
 require('dotenv').config();
 const app = require('./src/app');
+const connectorGateway = require('./src/modules/connector/connector.gateway');
 
 const startServer = async () => {
     try {
         const server = app.listen(process.env.PORT || 4002, () => {
             console.log(`${process.env.SERVICE_NAME || 'ERP-Service'} is running on port ${process.env.PORT || 4002} in ${process.env.NODE_ENV || 'development'} mode`);
         });
+
+        // Attach WebSocket gateway to HTTP server
+        connectorGateway.initialize(server);
 
         // Graceful shutdown
         const cleanup = async () => {
