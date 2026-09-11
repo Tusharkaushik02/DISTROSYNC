@@ -6,7 +6,9 @@ status: active
 tags: [architecture, erp, connector, websocket, tally]
 created: "2026-09-11T17:31:25"
 updated: "2026-09-11T17:31:53"
+updated: "2026-09-11T18:50:17"
 ---
+
 
 <!-- compiled_truth -->
 On-premise ERP instances (TallyPrime / Tally.ERP 9) run inside local office or warehouse networks behind NAT and corporate firewalls. They do not possess public static IPs or open inbound ports.
@@ -45,4 +47,9 @@ Rather than requiring distributors to configure router port forwarding, DDNS, or
   kind: decision
   summary: Decided on outbound persistent WebSocket architecture with local 9123 pairing UI and Tally 9000 XML bridge
   source: brain update-truth
+  affects: [tally-connector-websocket-bridge]
+
+- time: 2026-09-11T18:50:17
+  kind: decision
+  summary: "Implemented comprehensive Tally write pipeline: sales vouchers, masters (customers, suppliers, stock items), receipts, credit notes, voucher cache idempotency, and automated ERP order confirmation hook"
   affects: [tally-connector-websocket-bridge]

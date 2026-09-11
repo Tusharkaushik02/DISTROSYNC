@@ -6,6 +6,7 @@
   "bin": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "test": "node --test tests/*.test.js",
     "bundle": "node build.js bundle",
     "build:exe": "node build.js package",
     "build": "npm run bundle && npm run build:exe"

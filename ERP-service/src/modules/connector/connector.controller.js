@@ -2,16 +2,27 @@ const path = require('path');
 const fs = require('fs');
 const pairingService = require('./pairing.service');
 const connectorGateway = require('./connector.gateway');
+const tallyService = require('./tally.service');
 
 // Path where the built Windows executable lives
 const EXECUTABLE_PATH = path.resolve(__dirname, '../../../../connector/dist/tally-connector.exe');
+
+// Helper: extract tenantId from request headers
+function getTenantId(req) {
+  return req.headers['x-tenant-id'] || req.headers['tenant-id'] ||
+    process.env.DEFAULT_TENANT_ID || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+}
+
+// =========================================================================
+// EXISTING ENDPOINTS (unchanged)
+// =========================================================================
 
 /**
  * Generate pairing code for the authenticated/configured tenant
  */
 const generatePairingCode = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] || req.headers['tenant-id'] || process.env.DEFAULT_TENANT_ID || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const tenantId = getTenantId(req);
 
     const result = pairingService.generatePairingCode(tenantId);
 
@@ -70,7 +81,7 @@ const pairConnector = async (req, res) => {
  */
 const getStatus = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] || req.headers['tenant-id'] || process.env.DEFAULT_TENANT_ID || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const tenantId = getTenantId(req);
 
     const status = connectorGateway.getConnectorStatus(tenantId);
 
@@ -91,7 +102,7 @@ const getStatus = async (req, res) => {
  */
 const triggerSync = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] || req.headers['tenant-id'] || process.env.DEFAULT_TENANT_ID || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const tenantId = getTenantId(req);
     const { action = 'PING_TALLY', payload = {} } = req.body;
 
     const result = await connectorGateway.dispatchJob(tenantId, action, payload);
@@ -142,11 +153,233 @@ const getVersionInfo = (req, res) => {
   });
 };
 
+// =========================================================================
+// TALLY DOMAIN ENDPOINTS — READ
+// =========================================================================
+
+const getTallyCompanyInfo = async (req, res) => {
+  try {
+    const data = await tallyService.getCompanyInfo(getTenantId(req));
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallyTaxLedgers = async (req, res) => {
+  try {
+    const data = await tallyService.getTaxLedgers(getTenantId(req));
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallyCustomers = async (req, res) => {
+  try {
+    const data = await tallyService.listCustomers(getTenantId(req));
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallySuppliers = async (req, res) => {
+  try {
+    const data = await tallyService.listSuppliers(getTenantId(req));
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallyProducts = async (req, res) => {
+  try {
+    const data = await tallyService.listProducts(getTenantId(req));
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallyUnits = async (req, res) => {
+  try {
+    const data = await tallyService.listUnits(getTenantId(req));
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallyGodowns = async (req, res) => {
+  try {
+    const data = await tallyService.listGodowns(getTenantId(req));
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallyLedgers = async (req, res) => {
+  try {
+    const group = req.query.group || '';
+    const data = await tallyService.listLedgers(getTenantId(req), group);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallyOutstanding = async (req, res) => {
+  try {
+    const partyName = req.query.party;
+    if (!partyName) {
+      return res.status(400).json({ success: false, message: '"party" query param is required' });
+    }
+    const data = await tallyService.getLedgerOutstanding(getTenantId(req), partyName);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallyStockBalance = async (req, res) => {
+  try {
+    const itemName = req.query.item;
+    if (!itemName) {
+      return res.status(400).json({ success: false, message: '"item" query param is required' });
+    }
+    const data = await tallyService.getStockBalance(getTenantId(req), itemName);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const getTallySalesOrders = async (req, res) => {
+  try {
+    const data = await tallyService.listSalesOrders(getTenantId(req));
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+// =========================================================================
+// TALLY DOMAIN ENDPOINTS — WRITE (Masters)
+// =========================================================================
+
+const createTallyCustomer = async (req, res) => {
+  try {
+    const data = await tallyService.createCustomer(getTenantId(req), req.body);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const createTallySupplier = async (req, res) => {
+  try {
+    const data = await tallyService.createSupplier(getTenantId(req), req.body);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const createTallyProduct = async (req, res) => {
+  try {
+    const data = await tallyService.createStockItem(getTenantId(req), req.body);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+// =========================================================================
+// TALLY DOMAIN ENDPOINTS — WRITE (Transactions)
+// =========================================================================
+
+const createTallyInvoice = async (req, res) => {
+  try {
+    const data = await tallyService.createSalesInvoice(getTenantId(req), req.body);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const createTallyReceipt = async (req, res) => {
+  try {
+    const data = await tallyService.createReceipt(getTenantId(req), req.body);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const createTallyCreditNote = async (req, res) => {
+  try {
+    const data = await tallyService.createCreditNote(getTenantId(req), req.body);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const createTallyPurchase = async (req, res) => {
+  try {
+    const data = await tallyService.createPurchaseInvoice(getTenantId(req), req.body);
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
+const syncOrderToTally = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { orderId } = req.params;
+    const orderService = require('../orders/order.service');
+    const order = await orderService.getOrderById(orderId, tenantId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: `Order ${orderId} not found` });
+    }
+    const result = await tallyService.pushOrderToTally(tenantId, order, req.body || {});
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    return res.status(502).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
+  // Existing
   generatePairingCode,
   pairConnector,
   getStatus,
   triggerSync,
   downloadWindowsConnector,
-  getVersionInfo
+  getVersionInfo,
+  // Tally READ
+  getTallyCompanyInfo,
+  getTallyTaxLedgers,
+  getTallyCustomers,
+  getTallySuppliers,
+  getTallyProducts,
+  getTallyUnits,
+  getTallyGodowns,
+  getTallyLedgers,
+  getTallyOutstanding,
+  getTallyStockBalance,
+  getTallySalesOrders,
+  // Tally WRITE — Masters
+  createTallyCustomer,
+  createTallySupplier,
+  createTallyProduct,
+  // Tally WRITE — Transactions
+  createTallyInvoice,
+  createTallyReceipt,
+  createTallyCreditNote,
+  createTallyPurchase,
+  syncOrderToTally
 };

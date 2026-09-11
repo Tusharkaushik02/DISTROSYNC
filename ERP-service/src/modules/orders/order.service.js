@@ -4,6 +4,8 @@ const productRepository = require('../products/product.repository');
 const inventoryService = require('../inventory/inventory.service');
 const prisma = require('../../config/prisma');
 const { AppError } = require('../../shared/errors/app.error');
+const tallyService = require('../connector/tally.service');
+const connectorGateway = require('../connector/connector.gateway');
 
 class OrderService {
     async getOrderById(id, tenantId) {
@@ -139,7 +141,9 @@ class OrderService {
             return newOrder;
         });
 
-        return this.formatOrder(createdOrder);
+        const formatted = this.formatOrder(createdOrder);
+        this.triggerTallySync(tenantId, formatted).catch(() => {});
+        return formatted;
     }
 
     async updateOrder(id, tenantId, data) {
@@ -203,11 +207,31 @@ class OrderService {
 
         const updated = await orderRepository.updateStatus(id, tenantId, status);
         console.log(`[ERP Order] 🔄 Status updated for Order ${id}: ${existing.status} -> ${status}`);
+
+        if (status === 'CONFIRMED' && existing.status !== 'CONFIRMED') {
+            this.triggerTallySync(tenantId, this.formatOrder({ ...existing, status: 'CONFIRMED' })).catch(() => {});
+        }
+
         return {
             orderId: updated.id,
             status: updated.status,
             updatedAt: updated.updatedAt
         };
+    }
+
+    async triggerTallySync(tenantId, order) {
+        try {
+            const connStatus = connectorGateway.getConnectorStatus(tenantId);
+            if (!connStatus || !connStatus.online) {
+                console.log(`[ERP Order] Tally connector offline for tenant ${tenantId}. Order ${order.id} will sync when connector comes online.`);
+                return;
+            }
+            console.log(`[ERP Order] 🔄 Auto-dispatching Order ${order.id} to Tally for tenant ${tenantId}...`);
+            await tallyService.pushOrderToTally(tenantId, order);
+            console.log(`[ERP Order] ✅ Order ${order.id} synced to Tally successfully.`);
+        } catch (err) {
+            console.warn(`[ERP Order] ⚠️ Tally auto-sync for Order ${order.id} skipped/failed: ${err.message}`);
+        }
     }
 
     formatOrder(order) {
