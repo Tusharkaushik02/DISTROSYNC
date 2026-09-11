@@ -2,7 +2,7 @@
 slug: mindmap
 title: Feature mindmap
 role: feature mindmap
-updated: "2026-09-09T19:34:49"
+updated: "2026-09-11T17:36:17"
 ---
 
 # Feature mindmap
@@ -38,15 +38,24 @@ mindmap
       Customer Registry
       Order Lifecycle PENDING to DELIVERED
       Document Upload and PDF Parsing
+      WebSocket Connector Gateway
     User and Tenant Management
       OTP Signup and Email Verification
       JWT Cookie Auth Access plus Refresh
       Redis Session Storage
       Company Configuration
       WhatsApp Config per Company
-      ERP Config per Company schema only
-    ERP Plugin Layer planned
-      Tally XML HTTP Adapter
+      ERP Config per Company
+    On-Premise ERP Connector
+      TallyPrime XML HTTP Bridge port 9000
+      Outbound Persistent WebSocket to Cloud
+      Local Pairing Dashboard port 9123
+      One-Time 6-Digit Code Exchange
+      Stock Item Queries
+      Ledger Queries
+      Sales Order Queries
+      Standalone Windows Binary pkg and esbuild
+    Future ERP Adapters planned
       SAP BAPI RFC Adapter
       Busy REST Adapter
       Marg JSON Adapter

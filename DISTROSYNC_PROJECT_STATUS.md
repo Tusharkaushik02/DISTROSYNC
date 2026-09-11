@@ -105,8 +105,9 @@ Retailer / Customer
 | **Intent Classifier (Standalone)**| `NOT IMPLEMENTED` | File contains `# Stub — not yet implemented.` | `AI-service/app/intelligence/intent/intent_classifier.py` | Intent classification is currently handled implicitly by Groq tool calling. | Implement if non-LLM pre-routing / fast intent parsing is required. |
 | **Order Parser (Standalone)** | `NOT IMPLEMENTED` | File contains `# Stub — not yet implemented.` | `AI-service/app/intelligence/extraction/order_parser.py` | Extraction is currently handled natively via LLM function calling schemas. | Consolidate or deprecate standalone extraction stub. |
 | **ERP Service (Core/Mock ERP)** | `IMPLEMENTED` | REST APIs for Customers, Products, Inventory, Orders, Documents | `ERP-service/src/app.js`, `ERP-service/prisma/schema.prisma` | Tenant-scoped CRUD and transactional inventory reservation in PostgreSQL. | Install dependencies (`node_modules`) and run integration tests. |
-| **ERP Plugin / Connector Layer** | `PLANNED` | Architecture conceptualized; `ERPConfiguration` model exists in DB | `user-service/prisma/schema.prisma`, `user-service/src/services/erp.service.js` | DB stores `ERPType` (TALLY, SAP, BUSY, MARG, ORACLE); no connector drivers exist. | Build Connector Manager and first plugin (Tally XML / REST adapter). |
-| **User Service (Auth & Config)** | `PARTIALLY IMPLEMENTED` | Express service for JWT, OTP, Company, WhatsApp & ERP config | `user-service/src/app.js`, `user-service/src/services/auth.service.js` | Full OTP signup, Redis session storage, JWT cookie auth. **Has export bug on /auth/me.** | Fix `getCurrentUser` export bug and install dependencies. |
+| **ERP Plugin / Connector Layer** | `IMPLEMENTED` | Tally on-premise connector agent & ERP-service WebSocket gateway | `connector/src/`, `ERP-service/src/modules/connector/` | Standalone Windows `.exe` (`pkg`/`esbuild`) and Node.js agent with outbound persistent WebSocket (`/ws/connector`), local dashboard (`:9123`), 6-digit code pairing, and TallyPrime XML HTTP bridge (`:9000`) for stock items, ledgers, and sales orders. | Implement Tally XML sales voucher creation for automatic order posting. |
+| **User Service (Auth & Config)** | `IMPLEMENTED` | Express service for JWT, OTP, Company, WhatsApp & ERP config | `user-service/src/app.js`, `user-service/src/services/auth.service.js` | Full OTP signup, Redis session storage, JWT cookie auth. `getCurrentUser` export verified and active. | Run integration tests across auth endpoints. |
+| **Docker Compose (Full Stack)** | `IMPLEMENTED` | Unified multi-service compose file with healthchecks | `docker-compose.yml` | Orchestrates 4 microservices, 3 PostgreSQL databases, Redis, and Qdrant in a single isolated network. | Add production container hardening. |
 | **RabbitMQ / Event-Driven Bus** | `PLANNED` | No RabbitMQ connection, amqplib, or broker code exists | N/A (Only mentioned in design discussions) | Currently services communicate synchronously via HTTP REST. | Introduce RabbitMQ/Kafka when asynchronous webhook handling is required. |
 | **API Gateway** | `PLANNED` | Individual services run on separate ports (4001, 4002, 8000) | N/A | No Kong, NGINX, or Express Gateway currently reverse-proxies endpoints. | Configure unified API gateway (or Docker reverse proxy) for routing. |
 | **Automated Testing Suite** | `IMPLEMENTED` | 177 passing tests in `whatsapp-service`; 74 passing tests in `AI-service` | `whatsapp-service/tests/`, `AI-service/tests/` | Full end-to-end integration and unit tests passing in both WhatsApp and AI services. | Add integration test runner for ERP-service and user-service. |
@@ -356,6 +357,7 @@ graph TD
   - `src/modules/inventory/`: Controller, Repository, Routes, Service.
   - `src/modules/orders/`: Controller, Repository, Routes, Schema, Service (Transactional Inventory Reservation).
   - `src/modules/documents/`: Controller, Repository, Routes, Schema, Service, PDF Parser, AI-RAG client.
+  - `src/modules/connector/`: Gateway (`connector.gateway.js` for `/ws/connector`), Controller (`connector.controller.js`), Routes (`connector.routes.js`), Service (`connector.service.js`).
   - `src/shared/`: Auth Middleware (`auth.middleware.js`), Error Handler, Response Utilities.
 - **External Dependencies:** AI Service (`http://localhost:8000/api/v1/rag/ingest`).
 - **Database Dependencies:** PostgreSQL (`distrosync_erp` :5433).
@@ -376,7 +378,28 @@ graph TD
   - `src/middlewares/`: `auth.middleware.js`.
   - `src/utils/`: `auth.js`, `device.js`, `otp.js`.
 - **Database Dependencies:** PostgreSQL (`postgres` :5432), Redis (:6379).
-- **Status:** `PARTIALLY IMPLEMENTED` (Has export bug in `auth.service.js`; requires dependency installation).
+- **Status:** `IMPLEMENTED` (`getCurrentUser` export verified; requires dependency installation).
+
+---
+
+### 5. Tally Connector (`connector`)
+- **Service Name:** `connector` (DistroSync Tally Connector)
+- **Purpose:** On-premise agent bridging local TallyPrime / Tally.ERP 9 with DistroSync cloud. Initiates an outbound persistent WebSocket connection to ERP-service (`/ws/connector`), bypassing SME firewalls and NAT without router port-forwarding. Executes TDL XML queries against local Tally (port 9000), translates stock items, ledgers, and sales orders, and provides a 1-click browser pairing dashboard on port 9123.
+- **Technology Stack:** Node.js 18+, `ws` (WebSocket client), Express 4.19, `pkg` (standalone Windows `.exe` binary), `esbuild`, XML parser, rotating file logger.
+- **Configured Port:** `9123` (local pairing dashboard); connects to ERP-service port `4002`.
+- **Entry Point:** `c:\DISTROSYNC\connector\src\index.js` or `dist/tally-connector.exe`.
+- **Directory Layout:**
+  - `src/config/`: `config.js` (settings and environment resolution)
+  - `src/storage/`: `storage.service.js` (`%APPDATA%/DistroSync/config.json`)
+  - `src/auth/`: `auth.service.js` (code pairing & token exchange)
+  - `src/connection/`: `connection.manager.js` (WebSocket connection & heartbeat)
+  - `src/tally/`: `tally.client.js` (HTTP XML client :9000), `tally.templates.js` (TDL XML templates)
+  - `src/jobs/`: `job.processor.js` (dispatched sync job executor)
+  - `src/ui/`: `local.server.js` (Express dashboard :9123), `public/index.html` (setup UI)
+  - `src/utils/`: `logger.js` (rotating logger)
+- **External Dependencies:** Local TallyPrime XML Server (`http://localhost:9000`), ERP-service WebSocket (`/ws/connector`).
+- **Database Dependencies:** None (local configuration persisted in `%APPDATA%/DistroSync/config.json`).
+- **Status:** `IMPLEMENTED` & packaged as standalone Windows executable.
 
 ---
 
@@ -653,36 +676,52 @@ sequenceDiagram
 
 ---
 
-## Part 10 — ERP Plugin Architecture
+## Part 10 — ERP Plugin & Connector Architecture
 
-### Conceptual vs. Implemented State
-The repository has defined data models and initial service endpoints for ERP management, but **the physical plugin adapter layer for external proprietary ERP systems (Tally, SAP, Busy, Oracle) is currently PLANNED and NOT YET IMPLEMENTED in code.**
+### Implemented State: TallyPrime WebSocket Connector Bridge
+The on-premise connector layer for **TallyPrime / Tally.ERP 9** is now **IMPLEMENTED** across `connector/` and `ERP-service/src/modules/connector/`.
 
 ```
-                              CONCEPTUAL TARGET ARCHITECTURE
-                              
+                                  SYSTEM RUNTIME TOPOLOGY
+                                  
                                ┌─────────────────────────┐
                                │   AI Service / Tools    │
                                └────────────┬────────────┘
-                                            │ Standard Internal Model
+                                            │ Normalized REST APIs
                                             ▼
                                ┌─────────────────────────┐
-                               │    Connector Manager    │
+                               │       ERP-service       │
+                               │ WebSocket Gateway :4002 │
                                └────────────┬────────────┘
-                ┌──────────────┬────────────┴────────────┬──────────────┐
-                ▼              ▼                         ▼              ▼
-         ┌─────────────┐ ┌─────────────┐          ┌─────────────┐ ┌─────────────┐
-         │ TallyPlugin │ │  SAPPlugin  │          │ BusyPlugin  │ │OraclePlugin │
-         └──────┬──────┘ └──────┬──────┘          └──────┬──────┘ └──────┬──────┘
-                │ XML/HTTP      │ RFC/OData              │ REST/SQL      │ SuiteTalk
-                ▼              ▼                         ▼              ▼
-           Tally Prime    SAP S/4HANA                 Busy ERP       NetSuite
+                                            │ Outbound Persistent WS (/ws/connector)
+                                            │ (Bypasses NAT / Firewalls)
+                                            ▼
+                               ┌─────────────────────────┐
+                               │   DistroSync Connector  │
+                               │ Local Node/Exe Daemon   │
+                               │ Local Dashboard :9123   │
+                               └────────────┬────────────┘
+                                            │ Local HTTP POST (TDL XML)
+                                            ▼
+                               ┌─────────────────────────┐
+                               │  TallyPrime / ERP 9     │
+                               │ Local XML Server :9000  │
+                               └─────────────────────────┘
 ```
 
-### What Exists Today:
-1. **User Service Configuration Models:** `ERPConfiguration` table stores `erpType` (`TALLY`, `BUSY`, `MARG`, `SAP`, `ORACLE`, `CUSTOM`), `pluginName`, and JSON `connectionConfig`.
-2. **Reference / Mock ERP Backend:** `ERP-service` provides a native PostgreSQL implementation of Customers, Products, Inventory, and Orders that acts as the ERP during current development.
-3. **AI Client Interface:** `AI-service/app/clients/erp_client.py` makes standardized REST requests with tenant headers (`x-service-key`, `x-tenant-id`).
+### Key Architecture Components:
+1. **Outbound Persistent WebSocket (`/ws/connector`):** Initiated by the on-premise connector agent to the cloud ERP service. Eliminates router port forwarding, DDNS, and public IP requirements for distributors.
+2. **1-Click Browser Pairing Workflow:**
+   - Web app requests temporary 6-digit code via `POST /api/v1/connector/pair-code`.
+   - Connector launches local Express server on port `9123` and auto-opens `http://localhost:9123` in the user's browser.
+   - User inputs the code; connector exchanges it via `POST /api/v1/connector/pair` for a persistent secret token and company ID.
+   - Credentials are saved locally to `%APPDATA%/DistroSync/config.json`.
+3. **Tally XML Bridge (TDL Templates):**
+   - `EXPORT_STOCK_ITEMS_XML`: Fetches stock item names, parent groups, units of measure, closing balances, and standard rates.
+   - `EXPORT_LEDGERS_XML`: Fetches customer ledgers under Sundry Debtors, contact details, mobile numbers, and credit balances.
+   - `EXPORT_SALES_ORDERS_XML`: Queries sales orders with item-level normalization and XML control character entity sanitization (`&#x0; - &#x1F;`).
+   - Company health probe verifying that Tally has an active company loaded on port 9000.
+4. **Standalone Packaging:** Packaged via `pkg` and `esbuild` into `connector/dist/tally-connector.exe` for zero-dependency Windows execution.
 
 ---
 
@@ -808,6 +847,15 @@ erDiagram
 | `PATCH`| `/api/v1/orders/:id/status` | `ERP-service` | Updates order status (e.g. CANCELLED) | JWT / `x-service-key` | `IMPLEMENTED` |
 | `POST` | `/api/v1/documents/upload` | `ERP-service` | Uploads PDF & extracts text | JWT / `x-service-key` | `IMPLEMENTED` |
 | `POST` | `/api/v1/documents/:id/ingest` | `ERP-service` | Sends extracted text to AI RAG | JWT / `x-service-key` | `IMPLEMENTED` |
+| `POST` | `/api/v1/connector/pair-code` | `ERP-service` | Generates 6-digit code for connector pairing | JWT / Admin | `IMPLEMENTED` |
+| `POST` | `/api/v1/connector/pair` | `ERP-service` | Validates pairing code & issues persistent secret | None (Public) | `IMPLEMENTED` |
+| `GET`  | `/api/v1/connector/status` | `ERP-service` | Gets connector connection & company status | JWT / `x-service-key` | `IMPLEMENTED` |
+| `POST` | `/api/v1/connector/command` | `ERP-service` | Dispatches query/command across WebSocket | JWT / `x-service-key` | `IMPLEMENTED` |
+| `WS`   | `/ws/connector` | `ERP-service` | Persistent bi-directional WebSocket bridge | Bearer Token | `IMPLEMENTED` |
+| `GET`  | `/` | `connector` | Local browser pairing and setup dashboard | None | `IMPLEMENTED` |
+| `POST` | `/api/pair` | `connector` | Local endpoint to submit pairing code | None | `IMPLEMENTED` |
+| `GET`  | `/api/status` | `connector` | Local connector health & Tally status | None | `IMPLEMENTED` |
+| `GET`  | `/api/tally/test` | `connector` | Tests local TallyPrime port 9000 connection | None | `IMPLEMENTED` |
 | `POST` | `/auth/send-otp` | `user-service` | Sends signup verification OTP | None | `IMPLEMENTED` |
 | `POST` | `/auth/verify-otp` | `user-service` | Verifies OTP & creates user | None | `IMPLEMENTED` |
 | `POST` | `/auth/login` | `user-service` | Authenticates user & sets cookies | None | `IMPLEMENTED` |
@@ -1223,21 +1271,26 @@ sequenceDiagram
 
 ## Part 26 — Known Problems & Technical Debt
 
-### High Severity
-1. **User Service Missing Export Bug:**
-   - **Location:** `user-service/src/services/auth.service.js` (lines 368-400)
-   - **Issue:** Function `getCurrentUser` is implemented but omitted from `module.exports`, causing `GET /auth/me` to throw a 500 runtime error.
-
-### Medium Severity
-2. **Twilio Provider Test Mock Scope Issue:**
-   - **Location:** `whatsapp-service/tests/providers/twilio.provider.test.js` (line 17)
-   - **Issue:** Jest mock references out-of-scope factory variable `twilioFactory`, causing 1 test suite failure in an otherwise passing 175-test suite.
-3. **Hardcoded ERP Service Key Fallback:**
-   - **Location:** `AI-service/app/core/config.py` (line 26)
-   - **Issue:** Static API key `65c47afdd3eff0ebc554035a37dcf700e12c8fd7b634962ebf24126a5c5f08b5` is present in code as a fallback.
-4. **Missing Top-Level Docker Compose:**
+### Resolved Items
+1. **User Service Missing Export Bug (RESOLVED):**
+   - **Location:** `user-service/src/services/auth.service.js`
+   - **Status:** Verified resolved. `getCurrentUser` is properly included in `module.exports`.
+2. **Twilio Provider Test Mock Scope (RESOLVED):**
+   - **Location:** `whatsapp-service/tests/providers/twilio.provider.test.js`
+   - **Status:** Verified resolved. Factory variable is properly scoped before `jest.mock()`.
+3. **Top-Level Docker Compose (RESOLVED):**
    - **Location:** `docker-compose.yml`
-   - **Issue:** Root `docker-compose.yml` is an empty 0-byte file.
+   - **Status:** Fully implemented with 4 microservices, 3 PostgreSQL instances, Redis, Qdrant, volumes, and healthchecks.
+
+### Active Security & Architecture Items
+1. **Hardcoded ERP Service Key Fallback:**
+   - **Location:** `AI-service/app/core/config.py` (line 26)
+   - **Issue:** Static API key `65c47afdd3eff0ebc554035a37dcf700e12c8fd7b634962ebf24126a5c5f08b5` is present as fallback.
+   - **Action:** Remove fallback and enforce presence of `SHARED_SERVICE_API_KEY`.
+2. **Multi-Tenant Isolation in Qdrant (RAG):**
+   - **Location:** `AI-service/app/rag/vector_store.py`
+   - **Issue:** Vector store collections do not partition vectors by `tenantId`.
+   - **Action:** Add tenant payload filters to vector search and ingestion.
 
 ### Low Severity / Code Cleanup
 5. **Singular Tool Stubs in AI Service:**
@@ -1260,14 +1313,14 @@ Subsystem                       Maturity Level     Implementation Status
 WhatsApp Webhook & Ingestion     COMPLETE           100% (Twilio Inbound & Outbound)
 AI LLM Orchestration             COMPLETE           100% (Groq Multi-Turn Engine)
 Conversation Memory              COMPLETE           100% (PostgreSQL asyncpg per WaId)
-LLM Tool Calling & ERP Actions   COMPLETE           100% (8 Pydantic Tools)
-RAG Ingestion & Vector Search    PARTIAL            60%  (Endpoints exist; not in loop)
-ERP Data Layer & Order Service   COMPLETE           90%  (Express + Prisma PostgreSQL)
-ERP Plugin / Connector Layer     NOT STARTED        10%  (DB schema only; no drivers)
-User Auth & Tenant Management    PARTIAL            75%  (OTP/JWT works; 1 export bug)
-Security & Access Control        PARTIAL            70%  (Signatures & API keys active)
-Automated Testing                PARTIAL            65%  (WhatsApp passes; others need config)
-Production Readiness             PARTIAL            50%  (Need Gateway, Compose, Meta API)
+LLM Tool Calling & ERP Actions   COMPLETE           100% (9 Pydantic Tools incl. RAG)
+RAG Ingestion & Vector Search    COMPLETE           100% (Hybrid Qdrant + BM25 in loop)
+ERP Data Layer & Order Service   COMPLETE           95%  (Express + Prisma PostgreSQL)
+ERP Plugin / Connector Layer     COMPLETE           85%  (Tally WS Bridge, UI, Exe, Sync)
+User Auth & Tenant Management    COMPLETE           90%  (OTP/JWT, Bug Resolved)
+Security & Access Control        PARTIAL            75%  (Signatures & API keys active)
+Automated Testing                PARTIAL            75%  (WhatsApp & AI tests passing)
+Production Readiness             PARTIAL            70%  (Docker Compose unified; need M7/M8)
 ================================================================================
 ```
 
@@ -1304,10 +1357,10 @@ Production Readiness             PARTIAL            50%  (Need Gateway, Compose,
 ---
 
 ### My Next Task
-**Expose the existing RAG hybrid vector search as a callable tool (`search_knowledge_base`) in the AI Service Tool Registry.**
+**Implement Tally XML Sales Voucher creation template and automatic dispatch upon WhatsApp order confirmation.**
 
 ### Definition of Done
-Upload a catalog or policy PDF, ask a question about that PDF over WhatsApp, and confirm that the LLM autonomously executes the knowledge base search tool and answers accurately.
+When an order is created via the WhatsApp AI conversation loop and committed to `distrosync_erp` PostgreSQL, dispatch a `CREATE_SALES_VOUCHER` command across the WebSocket bridge to the on-premise connector, inserting the sales order voucher directly into TallyPrime.
 
 ---
 *Document generated as the authoritative technical audit and source of truth for the DISTROSYNC repository.*
